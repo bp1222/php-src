@@ -622,6 +622,9 @@ ZEND_API int zval_update_constant_ex(zval *p, zend_class_entry *scope) /* {{{ */
 		if (UNEXPECTED(zend_ast_evaluate(&tmp, Z_ASTVAL_P(p), scope) != SUCCESS)) {
 			return FAILURE;
 		}
+		if (UNEXPECTED(Z_ISERROR(tmp))) {
+			ZVAL_NULL(&tmp);
+		}
 		if (inline_change) {
 			zval_ptr_dtor(p);
 		}

@@ -1734,6 +1734,20 @@ static zend_never_inline void zend_fetch_dimension_address_UNSET(zval *result, z
 	zend_fetch_dimension_address(result, container_ptr, dim, dim_type, BP_VAR_UNSET EXECUTE_DATA_CC);
 }
 
+static zend_always_inline int zend_fetch_dimension_address_read_valid_container(zval *container) {
+	int ret = 1;
+
+	if (EG(current_execute_data)->opline->opcode != ZEND_FETCH_LIST) {
+		if (EG(current_execute_data)->opline->op1_type == IS_CV) {
+			ret = 0;
+		} else if (!Z_ISERROR_P(container)) {
+			ret = 0;
+		}
+	}
+
+	return ret;
+}
+
 static zend_always_inline void zend_fetch_dimension_address_read(zval *result, zval *container, zval *dim, int dim_type, int type, int support_strings, int slow EXECUTE_DATA_DC)
 {
 	zval *retval;
@@ -1829,13 +1843,22 @@ try_string_offset:
 			}
 		}
 	} else {
-		if (type != BP_VAR_IS && UNEXPECTED(Z_TYPE_P(container) == IS_UNDEF)) {
-			zval_undefined_cv(EX(opline)->op1.var EXECUTE_DATA_CC);
+		if (type != BP_VAR_IS) {
+			if (UNEXPECTED(Z_TYPE_P(container) == IS_UNDEF)) {
+				zval_undefined_cv(EG(current_execute_data)->opline->op1.var EXECUTE_DATA_CC);
+			} else if (!zend_fetch_dimension_address_read_valid_container(container)) {
+				zend_error(E_WARNING, "Variable of type %s does not accept array offsets", zend_get_type_by_const(Z_TYPE_P(container)));
+			}
 		}
 		if (/*dim_type == IS_CV &&*/ UNEXPECTED(Z_TYPE_P(dim) == IS_UNDEF)) {
 			zval_undefined_cv(EX(opline)->op2.var EXECUTE_DATA_CC);
 		}
-		ZVAL_NULL(result);
+
+		if (EG(current_execute_data)->opline->opcode == ZEND_DECLARE_CONST || ((EG(current_execute_data)->opline+1)->op1_type == IS_VAR && EG(current_execute_data)->opline->opcode == (EG(current_execute_data)->opline + 1)->opcode)) {
+			ZVAL_ERROR(result);
+		} else {
+			ZVAL_NULL(result);
+		}
 	}
 }
 

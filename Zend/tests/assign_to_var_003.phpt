@@ -13,6 +13,7 @@ var_dump($var1);
 echo "Done\n";
 ?>
 --EXPECTF--	
+Warning: Variable of type %s does not accept array offsets in %s on line %d
 NULL
 NULL
 Done
