@@ -13,6 +13,7 @@
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
    | Author: Jim Winstead <jimw@php.net>                                  |
+   | Author: David Walker <dave@mudsite.com>                              |
    +----------------------------------------------------------------------+
  */
 /* $Id$ */
@@ -59,7 +60,7 @@ PHPAPI void php_url_free(php_url *theurl)
 }
 /* }}} */
 
-/* {{{ php_replace_controlchars
+/* {{{ php_replace_controlchars_ex
  */
 PHPAPI char *php_replace_controlchars_ex(char *str, size_t len)
 {
@@ -82,20 +83,30 @@ PHPAPI char *php_replace_controlchars_ex(char *str, size_t len)
 }
 /* }}} */
 
+/* {{{ php_replace_controlchars
+ */
 PHPAPI char *php_replace_controlchars(char *str)
 {
 	return php_replace_controlchars_ex(str, strlen(str));
 }
+/* }}} */
 
+/* php_url_parse, and parse_url() are deprecated.
+ * https://wiki.php.net/rfc/replace_parse_url
+ */
+/* {{{ php_url_parse
+ */
 PHPAPI php_url *php_url_parse(char const *str)
 {
 	return php_url_parse_ex(str, strlen(str));
 }
+/* }}} */
 
-/* {{{ php_url_parse
+/* {{{ php_url_parse_ex
  */
 PHPAPI php_url *php_url_parse_ex(char const *str, size_t length)
 {
+    php_error_docref(NULL, E_DEPRECATED, "New function rfc_parse_url() is a compliant parser and will replace parse_url() in the future");
 	char port_buf[6];
 	php_url *ret = ecalloc(1, sizeof(php_url));
 	char const *s, *e, *p, *pp, *ue;
@@ -401,6 +412,86 @@ PHP_FUNCTION(parse_url)
 		add_assoc_string(return_value, "fragment", resource->fragment);
 done:
 	php_url_free(resource);
+}
+/* }}} */
+
+/* {{{ proto mixed rfc_parse_url(string url, [int url_component, [int rfc_version]])
+   Parse a URL and return its components */
+PHP_FUNCTION(rfc_parse_url) {
+	unsigned char *str;
+	size_t str_len;
+	php_url *resource;
+	zend_long key = -1;
+    zend_long rfcv = PHP_URL_PARSE_RFC3986;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|ll", &str, &str_len, &key, &rfcv) == FAILURE) {
+		return;
+	}
+
+	resource = php_rfc_url_parse(str, str_len, rfcv);
+
+	if (key > -1) {
+		switch (key) {
+			case PHP_URL_SCHEME:
+				if (resource->scheme != NULL) RETVAL_STRING(resource->scheme);
+				break;
+			case PHP_URL_HOST:
+				if (resource->host != NULL) RETVAL_STRING(resource->host);
+				break;
+			case PHP_URL_PORT:
+				if (resource->port != 0) RETVAL_LONG(resource->port);
+				break;
+			case PHP_URL_USER:
+				if (resource->user != NULL) RETVAL_STRING(resource->user);
+				break;
+			case PHP_URL_PASS:
+				if (resource->pass != NULL) RETVAL_STRING(resource->pass);
+				break;
+			case PHP_URL_PATH:
+				if (resource->path != NULL) RETVAL_STRING(resource->path);
+				break;
+			case PHP_URL_QUERY:
+				if (resource->query != NULL) RETVAL_STRING(resource->query);
+				break;
+			case PHP_URL_FRAGMENT:
+				if (resource->fragment != NULL) RETVAL_STRING(resource->fragment);
+				break;
+			default:
+				php_error_docref(NULL, E_WARNING, "Invalid URL component identifier " ZEND_LONG_FMT, key);
+				RETVAL_NULL();
+		}
+		goto done;
+	}
+
+	/* allocate an array for return */
+	array_init(return_value);
+
+	/* add the various elements to the array */
+	if (resource->scheme != NULL)
+		add_assoc_string(return_value, "scheme", resource->scheme);
+	if (resource->host != NULL)
+		add_assoc_string(return_value, "host", resource->host);
+	if (resource->port != 0)
+		add_assoc_long(return_value, "port", resource->port);
+	if (resource->user != NULL)
+		add_assoc_string(return_value, "user", resource->user);
+	if (resource->pass != NULL)
+		add_assoc_string(return_value, "pass", resource->pass);
+	if (resource->path != NULL)
+		add_assoc_string(return_value, "path", resource->path);
+	if (resource->query != NULL)
+		add_assoc_string(return_value, "query", resource->query);
+	if (resource->fragment != NULL)
+		add_assoc_string(return_value, "fragment", resource->fragment);
+
+	if (UNEXPECTED(!zend_array_count(HASH_OF(return_value)))) {
+		efree(Z_ARRVAL_P(return_value));
+		RETVAL_NULL();
+	}
+
+done:
+	php_url_free(resource);
+
 }
 /* }}} */
 

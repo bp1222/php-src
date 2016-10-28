@@ -13,6 +13,7 @@
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
    | Author: Jim Winstead <jimw@php.net>                                  |
+   | Author: David Walker <dave@mudsite.com>                              |
    +----------------------------------------------------------------------+
  */
 /* $Id$ */
@@ -24,6 +25,7 @@ typedef struct php_url {
 	char *scheme;
 	char *user;
 	char *pass;
+	char *userinfo; // For RFC compliant parsing
 	char *host;
 	unsigned short port;
 	char *path;
@@ -39,7 +41,9 @@ PHPAPI size_t php_raw_url_decode(char *str, size_t len); /* return value: length
 PHPAPI zend_string *php_url_encode(char const *s, size_t len);
 PHPAPI zend_string *php_raw_url_encode(char const *s, size_t len);
 PHPAPI char *php_replace_controlchars_ex(char *str, size_t len);
+PHPAPI php_url *php_rfc_url_parse(unsigned char *str, size_t slen, zend_long rfcv);
 
+PHP_FUNCTION(rfc_parse_url);
 PHP_FUNCTION(parse_url);
 PHP_FUNCTION(urlencode);
 PHP_FUNCTION(urldecode);
@@ -55,6 +59,9 @@ PHP_FUNCTION(get_headers);
 #define PHP_URL_PATH 5
 #define PHP_URL_QUERY 6
 #define PHP_URL_FRAGMENT 7
+
+#define PHP_URL_PARSE_RFC3986 0
+#define PHP_URL_PARSE_RFC3987 1
 
 #define PHP_QUERY_RFC1738 1
 #define PHP_QUERY_RFC3986 2

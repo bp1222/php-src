@@ -2837,6 +2837,7 @@ const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(vfprintf,														arginfo_vfprintf)
 	PHP_FE(sscanf,															arginfo_sscanf)
 	PHP_FE(fscanf,															arginfo_fscanf)
+	PHP_FE(rfc_parse_url,													arginfo_parse_url)
 	PHP_FE(parse_url,														arginfo_parse_url)
 	PHP_FE(urlencode,														arginfo_urlencode)
 	PHP_FE(urldecode,														arginfo_urldecode)
@@ -3615,6 +3616,8 @@ PHP_MINIT_FUNCTION(basic) /* {{{ */
 	REGISTER_LONG_CONSTANT("PHP_URL_PATH", PHP_URL_PATH, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PHP_URL_QUERY", PHP_URL_QUERY, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PHP_URL_FRAGMENT", PHP_URL_FRAGMENT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_PARSE_RFC3986", PHP_URL_PARSE_RFC3986, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("PHP_URL_PARSE_RFC3987", PHP_URL_PARSE_RFC3987, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PHP_QUERY_RFC1738", PHP_QUERY_RFC1738, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("PHP_QUERY_RFC3986", PHP_QUERY_RFC3986, CONST_CS | CONST_PERSISTENT);
 
