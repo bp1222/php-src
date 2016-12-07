@@ -106,8 +106,7 @@ enum _zend_ast_kind {
 	ZEND_AST_ASSIGN_REF,
 	ZEND_AST_ASSIGN_OP,
 	ZEND_AST_BINARY_OP,
-	ZEND_AST_GREATER,
-	ZEND_AST_GREATER_EQUAL,
+	ZEND_AST_COMPARE_OP,
 	ZEND_AST_AND,
 	ZEND_AST_OR,
 	ZEND_AST_ARRAY_ELEM,
@@ -263,9 +262,13 @@ static zend_always_inline zend_ast *zend_ast_create_binary_op(uint32_t opcode, z
 static zend_always_inline zend_ast *zend_ast_create_assign_op(uint32_t opcode, zend_ast *op0, zend_ast *op1) {
 	return zend_ast_create_ex(ZEND_AST_ASSIGN_OP, opcode, op0, op1);
 }
+static zend_always_inline zend_ast *zend_ast_create_compare_op(uint32_t opcode, zend_ast *op0, zend_ast *op1) {
+	return zend_ast_create_ex(ZEND_AST_COMPARE_OP, opcode, op0, op1);
+}
 static zend_always_inline zend_ast *zend_ast_create_cast(uint32_t type, zend_ast *op0) {
 	return zend_ast_create_ex(ZEND_AST_CAST, type, op0);
 }
+
 static zend_always_inline zend_ast *zend_ast_list_rtrim(zend_ast *ast) {
 	zend_ast_list *list = zend_ast_get_list(ast);
 	if (list->children && list->child[list->children - 1] == NULL) {

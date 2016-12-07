@@ -69,8 +69,8 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %left '|'
 %left '^'
 %left '&'
-%nonassoc T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL T_SPACESHIP
-%nonassoc '<' T_IS_SMALLER_OR_EQUAL '>' T_IS_GREATER_OR_EQUAL
+%left T_IS_EQUAL T_IS_NOT_EQUAL T_IS_IDENTICAL T_IS_NOT_IDENTICAL '<' T_IS_SMALLER_OR_EQUAL '>' T_IS_GREATER_OR_EQUAL
+%nonassoc T_SPACESHIP
 %left T_SL T_SR
 %left '+' '-' '.'
 %left '*' '/' '%'
@@ -915,37 +915,37 @@ expr_without_variable:
 	|	expr '|' expr	{ $$ = zend_ast_create_binary_op(ZEND_BW_OR, $1, $3); }
 	|	expr '&' expr	{ $$ = zend_ast_create_binary_op(ZEND_BW_AND, $1, $3); }
 	|	expr '^' expr	{ $$ = zend_ast_create_binary_op(ZEND_BW_XOR, $1, $3); }
-	|	expr '.' expr 	{ $$ = zend_ast_create_binary_op(ZEND_CONCAT, $1, $3); }
-	|	expr '+' expr 	{ $$ = zend_ast_create_binary_op(ZEND_ADD, $1, $3); }
-	|	expr '-' expr 	{ $$ = zend_ast_create_binary_op(ZEND_SUB, $1, $3); }
+	|	expr '.' expr	{ $$ = zend_ast_create_binary_op(ZEND_CONCAT, $1, $3); }
+	|	expr '+' expr	{ $$ = zend_ast_create_binary_op(ZEND_ADD, $1, $3); }
+	|	expr '-' expr	{ $$ = zend_ast_create_binary_op(ZEND_SUB, $1, $3); }
 	|	expr '*' expr	{ $$ = zend_ast_create_binary_op(ZEND_MUL, $1, $3); }
 	|	expr T_POW expr	{ $$ = zend_ast_create_binary_op(ZEND_POW, $1, $3); }
 	|	expr '/' expr	{ $$ = zend_ast_create_binary_op(ZEND_DIV, $1, $3); }
-	|	expr '%' expr 	{ $$ = zend_ast_create_binary_op(ZEND_MOD, $1, $3); }
-	| 	expr T_SL expr	{ $$ = zend_ast_create_binary_op(ZEND_SL, $1, $3); }
+	|	expr '%' expr	{ $$ = zend_ast_create_binary_op(ZEND_MOD, $1, $3); }
+	|	expr T_SL expr	{ $$ = zend_ast_create_binary_op(ZEND_SL, $1, $3); }
 	|	expr T_SR expr	{ $$ = zend_ast_create_binary_op(ZEND_SR, $1, $3); }
 	|	'+' expr %prec T_INC { $$ = zend_ast_create(ZEND_AST_UNARY_PLUS, $2); }
 	|	'-' expr %prec T_INC { $$ = zend_ast_create(ZEND_AST_UNARY_MINUS, $2); }
 	|	'!' expr { $$ = zend_ast_create_ex(ZEND_AST_UNARY_OP, ZEND_BOOL_NOT, $2); }
 	|	'~' expr { $$ = zend_ast_create_ex(ZEND_AST_UNARY_OP, ZEND_BW_NOT, $2); }
-	|	expr T_IS_IDENTICAL expr
-			{ $$ = zend_ast_create_binary_op(ZEND_IS_IDENTICAL, $1, $3); }
-	|	expr T_IS_NOT_IDENTICAL expr
-			{ $$ = zend_ast_create_binary_op(ZEND_IS_NOT_IDENTICAL, $1, $3); }
-	|	expr T_IS_EQUAL expr
-			{ $$ = zend_ast_create_binary_op(ZEND_IS_EQUAL, $1, $3); }
-	|	expr T_IS_NOT_EQUAL expr
-			{ $$ = zend_ast_create_binary_op(ZEND_IS_NOT_EQUAL, $1, $3); }
-	|	expr '<' expr
-			{ $$ = zend_ast_create_binary_op(ZEND_IS_SMALLER, $1, $3); }
-	|	expr T_IS_SMALLER_OR_EQUAL expr
-			{ $$ = zend_ast_create_binary_op(ZEND_IS_SMALLER_OR_EQUAL, $1, $3); }
-	|	expr '>' expr
-			{ $$ = zend_ast_create(ZEND_AST_GREATER, $1, $3); }
-	|	expr T_IS_GREATER_OR_EQUAL expr
-			{ $$ = zend_ast_create(ZEND_AST_GREATER_EQUAL, $1, $3); }
 	|	expr T_SPACESHIP expr
 			{ $$ = zend_ast_create_binary_op(ZEND_SPACESHIP, $1, $3); }
+	|	expr T_IS_IDENTICAL expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_IDENTICAL, $1, $3); $$->attr |= ZEND_COMPARE_EQUALITY; }
+	|	expr T_IS_NOT_IDENTICAL expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_NOT_IDENTICAL, $1, $3); $$->attr |= ZEND_COMPARE_EQUALITY; }
+	|	expr T_IS_EQUAL expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_EQUAL, $1, $3); $$->attr |= ZEND_COMPARE_EQUALITY; }
+	|	expr T_IS_NOT_EQUAL expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_NOT_EQUAL, $1, $3); $$->attr |= ZEND_COMPARE_EQUALITY; }
+	|	expr '<' expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_SMALLER, $1, $3); }
+	|	expr T_IS_SMALLER_OR_EQUAL expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_SMALLER_OR_EQUAL, $1, $3); }
+	|	expr '>' expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_SMALLER, $1, $3); $$->attr |= ZEND_COMPARE_GREATER; }
+	|	expr T_IS_GREATER_OR_EQUAL expr
+			{ $$ = zend_ast_create_compare_op(ZEND_IS_SMALLER_OR_EQUAL, $1, $3); $$->attr |= ZEND_COMPARE_GREATER; }
 	|	expr T_INSTANCEOF class_name_reference
 			{ $$ = zend_ast_create(ZEND_AST_INSTANCEOF, $1, $3); }
 	|	'(' expr ')' { $$ = $2; }

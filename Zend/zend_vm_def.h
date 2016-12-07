@@ -355,7 +355,11 @@ ZEND_VM_HANDLER(15, ZEND_IS_IDENTICAL, CONST|TMP|VAR|CV, CONST|TMP|VAR|CV)
 	FREE_OP1();
 	FREE_OP2();
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -373,7 +377,11 @@ ZEND_VM_HANDLER(16, ZEND_IS_NOT_IDENTICAL, CONST|TMP|VAR|CV, CONST|TMP|VAR|CV)
 	FREE_OP1();
 	FREE_OP2();
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -425,8 +433,12 @@ ZEND_VM_HANDLER(17, ZEND_IS_EQUAL, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -439,7 +451,11 @@ ZEND_VM_HANDLER(17, ZEND_IS_EQUAL, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0)) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 	FREE_OP1();
 	FREE_OP2();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -493,8 +509,12 @@ ZEND_VM_HANDLER(18, ZEND_IS_NOT_EQUAL, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -507,7 +527,11 @@ ZEND_VM_HANDLER(18, ZEND_IS_NOT_EQUAL, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0)) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 	FREE_OP1();
 	FREE_OP2();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -543,8 +567,16 @@ ZEND_VM_HANDLER(19, ZEND_IS_SMALLER, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -557,7 +589,17 @@ ZEND_VM_HANDLER(19, ZEND_IS_SMALLER, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
+
 	FREE_OP1();
 	FREE_OP2();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -593,8 +635,16 @@ ZEND_VM_HANDLER(20, ZEND_IS_SMALLER_OR_EQUAL, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -607,7 +657,17 @@ ZEND_VM_HANDLER(20, ZEND_IS_SMALLER_OR_EQUAL, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
+
 	FREE_OP1();
 	FREE_OP2();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -741,6 +801,7 @@ ZEND_VM_HANDLER(13, ZEND_BOOL_NOT, CONST|TMPVAR|CV, ANY)
 	USE_OPLINE
 	zval *val;
 	zend_free_op free_op1;
+	zend_bool result;
 
 	val = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_R);
 	if (Z_TYPE_INFO_P(val) == IS_TRUE) {
@@ -754,7 +815,12 @@ ZEND_VM_HANDLER(13, ZEND_BOOL_NOT, CONST|TMPVAR|CV, ANY)
 		}
 	} else {
 		SAVE_OPLINE();
-		ZVAL_BOOL(EX_VAR(opline->result.var), !i_zend_is_true(val));
+		result = !i_zend_is_true(val);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			ZVAL_COPY(EX_VAR(opline->result.var), val);
+		} else {
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		FREE_OP1();
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -2806,7 +2872,15 @@ ZEND_VM_HANDLER(46, ZEND_JMPZ_EX, CONST|TMPVAR|CV, JMP_ADDR)
 	}
 
 	SAVE_OPLINE();
-	ret = i_zend_is_true(val);
+	// Need to check if previous op was a compare-continue, if it is
+	// then we need to ensure that if the result wasn't false
+	// we assume true.  To support $a < 0 < $b syntax, where 0 would
+	// have been evaluated to false here, and skipped.
+	if ((opline - 1)->extended_value & ZEND_COMPARE_CONTINUE) {
+		ret = 1;
+	} else {
+		ret = i_zend_is_true(val);
+	}
 	FREE_OP1();
 	if (ret) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
@@ -2843,7 +2917,15 @@ ZEND_VM_HANDLER(47, ZEND_JMPNZ_EX, CONST|TMPVAR|CV, JMP_ADDR)
 	}
 
 	SAVE_OPLINE();
-	ret = i_zend_is_true(val);
+	// Need to check if previous op was a compare-continue, if it is
+	// then we need to ensure that if the result wasn't false
+	// we assume true.  To support $a < 0 < $b syntax, where 0 would
+	// have been evaluated to false here, and skipped.
+	if ((opline - 1)->extended_value & ZEND_COMPARE_CONTINUE) {
+		ret = 0;
+	} else {
+		ret = i_zend_is_true(val);
+	}
 	FREE_OP1();
 	if (ret) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
@@ -4859,12 +4941,17 @@ ZEND_VM_HANDLER(52, ZEND_BOOL, CONST|TMPVAR|CV, ANY)
 	USE_OPLINE
 	zval *val;
 	zend_free_op free_op1;
+	zend_bool result;
 
 	val = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_R);
 	if (Z_TYPE_INFO_P(val) == IS_TRUE) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 	} else if (EXPECTED(Z_TYPE_INFO_P(val) <= IS_TRUE)) {
-		ZVAL_FALSE(EX_VAR(opline->result.var));
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), val);
+		} else {
+			ZVAL_FALSE(EX_VAR(opline->result.var));
+		}
 		if (OP1_TYPE == IS_CV && UNEXPECTED(Z_TYPE_INFO_P(val) == IS_UNDEF)) {
 			SAVE_OPLINE();
 			GET_OP1_UNDEF_CV(val, BP_VAR_R);
@@ -4872,7 +4959,12 @@ ZEND_VM_HANDLER(52, ZEND_BOOL, CONST|TMPVAR|CV, ANY)
 		}
 	} else {
 		SAVE_OPLINE();
-		ZVAL_BOOL(EX_VAR(opline->result.var), i_zend_is_true(val));
+		result = i_zend_is_true(val);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			ZVAL_COPY(EX_VAR(opline->result.var), val);
+		} else {
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		FREE_OP1();
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}

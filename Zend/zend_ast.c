@@ -236,22 +236,6 @@ ZEND_API int zend_ast_evaluate(zval *result, zend_ast *ast, zend_class_entry *sc
 				zval_dtor(&op2);
 			}
 			break;
-		case ZEND_AST_GREATER:
-		case ZEND_AST_GREATER_EQUAL:
-			if (UNEXPECTED(zend_ast_evaluate(&op1, ast->child[0], scope) != SUCCESS)) {
-				ret = FAILURE;
-			} else if (UNEXPECTED(zend_ast_evaluate(&op2, ast->child[1], scope) != SUCCESS)) {
-				zval_dtor(&op1);
-				ret = FAILURE;
-			} else {
-				/* op1 > op2 is the same as op2 < op1 */
-				binary_op_type op = ast->kind == ZEND_AST_GREATER
-					? is_smaller_function : is_smaller_or_equal_function;
-				ret = op(result, &op2, &op1);
-				zval_dtor(&op1);
-				zval_dtor(&op2);
-			}
-			break;
 		case ZEND_AST_UNARY_OP:
 			if (UNEXPECTED(zend_ast_evaluate(&op1, ast->child[0], scope) != SUCCESS)) {
 				ret = FAILURE;
@@ -571,8 +555,8 @@ ZEND_API void zend_ast_apply(zend_ast *ast, zend_ast_apply_func fn) {
  *  140     left            |
  *  150     left            ^
  *  160     left            &
- *  170     non-associative == != === !==
- *  180     non-associative < <= > >= <=>
+ *  170     left            == != === !== < <= > >=
+ *  180     non-associative <=>
  *  190     left            << >>
  *  200     left            + - .
  *  210     left            * / %
@@ -973,6 +957,43 @@ static void zend_ast_export_class_no_header(smart_str *str, zend_ast_decl *decl,
 	smart_str_appends(str, "}");
 }
 
+static void zend_ast_export_comparison(smart_str *str, zend_ast *ast, int p, int priority, int indent)
+{
+    uint16_t greater = ast->attr & ZEND_COMPARE_GREATER;
+
+	if (priority > p) smart_str_appendc(str, '(');
+
+	zend_ast_export_ex(str, ast->child[0], p, indent);
+
+	switch (ast->attr) {
+		case ZEND_IS_IDENTICAL:
+			smart_str_appends(str, " === "); break;
+		case ZEND_IS_NOT_IDENTICAL:
+			smart_str_appends(str, " !== "); break;
+		case ZEND_IS_EQUAL:
+			smart_str_appends(str, " == "); break;
+		case ZEND_IS_NOT_EQUAL:
+			smart_str_appends(str, " != "); break;
+		case ZEND_IS_SMALLER:
+			if (greater) {
+				smart_str_appends(str, " > ");
+			} else {
+				smart_str_appends(str, " < ");
+			}
+			break;
+		case ZEND_IS_SMALLER_OR_EQUAL:
+			if (greater) {
+				smart_str_appends(str, " >= ");
+			} else {
+				smart_str_appends(str, " <= ");
+			}
+			break;
+	}
+
+	zend_ast_export_ex(str, ast->child[1], p, indent);
+	if (priority > p) smart_str_appendc(str, ')');
+}
+
 #define BINARY_OP(_op, _p, _pl, _pr) do { \
 		op = _op; \
 		p = _p; \
@@ -1359,20 +1380,15 @@ simple_list:
 				case ZEND_BW_OR:               BINARY_OP(" | ",   140, 140, 141);
 				case ZEND_BW_AND:              BINARY_OP(" & ",   160, 160, 161);
 				case ZEND_BW_XOR:              BINARY_OP(" ^ ",   150, 150, 151);
-				case ZEND_IS_IDENTICAL:        BINARY_OP(" === ", 170, 171, 171);
-				case ZEND_IS_NOT_IDENTICAL:    BINARY_OP(" !== ", 170, 171, 171);
-				case ZEND_IS_EQUAL:            BINARY_OP(" == ",  170, 171, 171);
-				case ZEND_IS_NOT_EQUAL:        BINARY_OP(" != ",  170, 171, 171);
-				case ZEND_IS_SMALLER:          BINARY_OP(" < ",   180, 181, 181);
-				case ZEND_IS_SMALLER_OR_EQUAL: BINARY_OP(" <= ",  180, 181, 181);
 				case ZEND_POW:                 BINARY_OP(" ** ",  250, 251, 250);
 				case ZEND_BOOL_XOR:            BINARY_OP(" xor ",  40,  40,  41);
 				case ZEND_SPACESHIP:           BINARY_OP(" <=> ", 180, 181, 181);
 				EMPTY_SWITCH_DEFAULT_CASE();
 			}
 			break;
-		case ZEND_AST_GREATER:                 BINARY_OP(" > ",   180, 181, 181);
-		case ZEND_AST_GREATER_EQUAL:           BINARY_OP(" >= ",  180, 181, 181);
+		case ZEND_AST_COMPARE_OP:
+			zend_ast_export_comparison(str, ast, 170, priority, indent);
+			break;
 		case ZEND_AST_AND:                     BINARY_OP(" && ",  130, 130, 131);
 		case ZEND_AST_OR:                      BINARY_OP(" || ",  120, 120, 121);
 		case ZEND_AST_ARRAY_ELEM:
