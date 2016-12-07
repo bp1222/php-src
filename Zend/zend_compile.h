@@ -293,6 +293,11 @@ typedef struct _zend_oparray_context {
 /* op_array uses strict mode types */
 #define ZEND_ACC_STRICT_TYPES			0x80000000
 
+#define ZEND_COMPARE_GREATER            0x8000
+#define ZEND_COMPARE_CONTINUE           0x4000
+#define ZEND_COMPARE_EQUALITY           0x2000
+#define ZEND_COMPARE_OP_MASK            0xE000
+
 char *zend_visibility_string(uint32_t fn_flags);
 
 typedef struct _zend_property_info {

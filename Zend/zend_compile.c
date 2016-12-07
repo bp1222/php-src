@@ -2121,11 +2121,8 @@ static void zend_check_live_ranges(zend_op *opline) /* {{{ */
 }
 /* }}} */
 
-static zend_op *zend_emit_op(znode *result, zend_uchar opcode, znode *op1, znode *op2) /* {{{ */
+static zend_always_inline void zend_emit_op_set_ops(zend_op *opline, znode *op1, znode *op2) /* {{{ */
 {
-	zend_op *opline = get_next_op(CG(active_op_array));
-	opline->opcode = opcode;
-
 	if (op1 == NULL) {
 		SET_UNUSED(opline->op1);
 	} else {
@@ -2139,6 +2136,51 @@ static zend_op *zend_emit_op(znode *result, zend_uchar opcode, znode *op1, znode
 	}
 
 	zend_check_live_ranges(opline);
+}
+/* }}} */
+
+static zend_op *zend_emit_op_at(uint32_t opnum, znode *result, zend_uchar opcode, znode *op1, znode *op2) /* {{{ */
+{
+	uint32_t i;
+	zend_op *opline = get_next_op(CG(active_op_array));
+	zend_op *tmp_op;
+
+	for (i = CG(active_op_array)->last - 1; opnum <= i; i--) {
+		CG(active_op_array)->opcodes[i + 1] = CG(active_op_array)->opcodes[i];
+		tmp_op = &CG(active_op_array)->opcodes[i + 1];
+		switch (tmp_op->opcode) {
+			case ZEND_JMP:
+				tmp_op->op1.opline_num++;
+				break;
+			case ZEND_JMPZ:
+			case ZEND_JMPNZ:
+			case ZEND_JMPZ_EX:
+			case ZEND_JMPNZ_EX:
+			case ZEND_JMP_SET:
+				tmp_op->op2.opline_num++;
+				break;
+		}
+	}
+
+	opline = &CG(active_op_array)->opcodes[opnum];
+	opline->opcode = opcode;
+
+	zend_emit_op_set_ops(opline, op1, op2);
+
+	if (result) {
+		zend_make_var_result(result, opline);
+	}
+
+	return opline;
+}
+/* }}} */
+
+static zend_op *zend_emit_op(znode *result, zend_uchar opcode, znode *op1, znode *op2) /* {{{ */
+{
+	zend_op *opline = get_next_op(CG(active_op_array));
+	opline->opcode = opcode;
+
+	zend_emit_op_set_ops(opline, op1, op2);
 
 	if (result) {
 		zend_make_var_result(result, opline);
@@ -2152,19 +2194,7 @@ static zend_op *zend_emit_op_tmp(znode *result, zend_uchar opcode, znode *op1, z
 	zend_op *opline = get_next_op(CG(active_op_array));
 	opline->opcode = opcode;
 
-	if (op1 == NULL) {
-		SET_UNUSED(opline->op1);
-	} else {
-		SET_NODE(opline->op1, op1);
-	}
-
-	if (op2 == NULL) {
-		SET_UNUSED(opline->op2);
-	} else {
-		SET_NODE(opline->op2, op2);
-	}
-
-	zend_check_live_ranges(opline);
+	zend_emit_op_set_ops(opline, op1, op2);
 
 	if (result) {
 		zend_make_tmp_result(result, opline);
@@ -6547,14 +6577,6 @@ static inline zend_bool zend_try_ct_eval_unary_pm(zval *result, zend_ast_kind ki
 }
 /* }}} */
 
-static inline void zend_ct_eval_greater(zval *result, zend_ast_kind kind, zval *op1, zval *op2) /* {{{ */
-{
-	binary_op_type fn = kind == ZEND_AST_GREATER
-		? is_smaller_function : is_smaller_or_equal_function;
-	fn(result, op2, op1);
-}
-/* }}} */
-
 static zend_bool zend_try_ct_eval_array(zval *result, zend_ast *ast) /* {{{ */
 {
 	zend_ast_list *list = zend_ast_get_list(ast);
@@ -6656,69 +6678,16 @@ void zend_compile_binary_op(znode *result, zend_ast *ast) /* {{{ */
 		}
 	}
 
-	do {
-		if (opcode == ZEND_IS_EQUAL || opcode == ZEND_IS_NOT_EQUAL) {
-			if (left_node.op_type == IS_CONST) {
-				if (Z_TYPE(left_node.u.constant) == IS_FALSE) {
-					opcode = (opcode == ZEND_IS_NOT_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
-					zend_emit_op_tmp(result, opcode, &right_node, NULL);
-					break;
-				} else if (Z_TYPE(left_node.u.constant) == IS_TRUE) {
-					opcode = (opcode == ZEND_IS_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
-					zend_emit_op_tmp(result, opcode, &right_node, NULL);
-					break;
-				}
-			} else if (right_node.op_type == IS_CONST) {
-				if (Z_TYPE(right_node.u.constant) == IS_FALSE) {
-					opcode = (opcode == ZEND_IS_NOT_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
-					zend_emit_op_tmp(result, opcode, &left_node, NULL);
-					break;
-				} else if (Z_TYPE(right_node.u.constant) == IS_TRUE) {
-					opcode = (opcode == ZEND_IS_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
-					zend_emit_op_tmp(result, opcode, &left_node, NULL);
-					break;
-				}
-			}
+	if (opcode == ZEND_CONCAT) {
+		/* convert constant operands to strings at compile-time */
+		if (left_node.op_type == IS_CONST) {
+			convert_to_string(&left_node.u.constant);
 		}
-		if (opcode == ZEND_CONCAT) {
-			/* convert constant operands to strings at compile-time */
-			if (left_node.op_type == IS_CONST) {
-				convert_to_string(&left_node.u.constant);
-			}
-			if (right_node.op_type == IS_CONST) {
-				convert_to_string(&right_node.u.constant);
-			}
+		if (right_node.op_type == IS_CONST) {
+			convert_to_string(&right_node.u.constant);
 		}
-		zend_emit_op_tmp(result, opcode, &left_node, &right_node);
-	} while (0);
-}
-/* }}} */
-
-/* We do not use zend_compile_binary_op for this because we want to retain the left-to-right
- * evaluation order. */
-void zend_compile_greater(znode *result, zend_ast *ast) /* {{{ */
-{
-	zend_ast *left_ast = ast->child[0];
-	zend_ast *right_ast = ast->child[1];
-	znode left_node, right_node;
-
-	ZEND_ASSERT(ast->kind == ZEND_AST_GREATER || ast->kind == ZEND_AST_GREATER_EQUAL);
-
-	zend_compile_expr(&left_node, left_ast);
-	zend_compile_expr(&right_node, right_ast);
-
-	if (left_node.op_type == IS_CONST && right_node.op_type == IS_CONST) {
-		result->op_type = IS_CONST;
-		zend_ct_eval_greater(&result->u.constant, ast->kind,
-			&left_node.u.constant, &right_node.u.constant);
-		zval_ptr_dtor(&left_node.u.constant);
-		zval_ptr_dtor(&right_node.u.constant);
-		return;
 	}
-
-	zend_emit_op_tmp(result,
-		ast->kind == ZEND_AST_GREATER ? ZEND_IS_SMALLER : ZEND_IS_SMALLER_OR_EQUAL,
-		&right_node, &left_node);
+	zend_emit_op_tmp(result, opcode, &left_node, &right_node);
 }
 /* }}} */
 
@@ -6763,6 +6732,126 @@ void zend_compile_unary_pm(znode *result, zend_ast *ast) /* {{{ */
 	lefthand_node.op_type = IS_CONST;
 	ZVAL_LONG(&lefthand_node.u.constant, (ast->kind == ZEND_AST_UNARY_PLUS) ? 1 : -1);
 	zend_emit_op_tmp(result, ZEND_MUL, &lefthand_node, &expr_node);
+}
+/* }}} */
+
+void zend_compile_compare_op(znode *result, zend_ast *ast) /* {{{ */
+{
+	zend_ast *left_ast = ast->child[0];
+	zend_ast *right_ast = ast->child[1];
+	znode left_node, right_node = {0};
+	zend_op *opline, *right_opline_jmpz;
+	uint32_t opcode, right_opnum_jmpz;
+	zend_bool valid = 0;
+
+	if (!(ast->attr & ZEND_COMPARE_EQUALITY)) {
+		if (right_ast->kind == ZEND_AST_COMPARE_OP) {
+			zend_error_noreturn(E_COMPILE_ERROR, "comparisions may not be right recursive");
+		}
+
+		if (left_ast->kind == ZEND_AST_COMPARE_OP)  {
+			left_ast->attr |= ZEND_COMPARE_CONTINUE;
+		}
+	}
+
+	if (left_ast->kind == ZEND_AST_COMPARE_OP)  {
+		zend_compile_expr(result, left_ast);
+		left_node = *result;
+		right_opnum_jmpz = get_next_op_number(CG(active_op_array));
+	} else {
+		zend_compile_expr(&left_node, left_ast);
+	}
+
+	if (left_node.op_type == IS_CONST && Z_TYPE(left_node.u.constant) == IS_FALSE) {
+		result->op_type = IS_CONST;
+		ZVAL_BOOL(&result->u.constant, 0);
+	} else {
+		opcode = ast->attr & ~ZEND_COMPARE_OP_MASK;
+		zend_compile_expr(&right_node, right_ast);
+
+		if (left_node.op_type == IS_CONST && right_node.op_type == IS_CONST) {
+			result->op_type = IS_CONST;
+
+			if (ast->attr & ZEND_COMPARE_GREATER) {
+				valid = zend_try_ct_eval_binary_op(&result->u.constant, opcode, &right_node.u.constant, &left_node.u.constant);
+			} else {
+				valid = zend_try_ct_eval_binary_op(&result->u.constant, opcode, &left_node.u.constant, &right_node.u.constant);
+			}
+
+			if (!valid || Z_TYPE(result->u.constant) == IS_FALSE) {
+				ZVAL_BOOL(&result->u.constant, 0);
+			} else {
+				if (valid && Z_TYPE(result->u.constant) == IS_TRUE && (ast->attr & ZEND_COMPARE_CONTINUE)) {
+					ZVAL_COPY_VALUE(&result->u.constant, &right_node.u.constant);
+				}
+			}
+		} else {
+			if (left_ast->kind == ZEND_AST_COMPARE_OP && left_node.op_type != IS_CONST) {
+				right_opline_jmpz = zend_emit_op_at(right_opnum_jmpz, NULL, ZEND_JMPZ_EX, &left_node, NULL);
+			}
+
+			do {
+				if (opcode == ZEND_IS_EQUAL || opcode == ZEND_IS_NOT_EQUAL) {
+					if (left_node.op_type == IS_CONST) {
+						if (Z_TYPE(left_node.u.constant) == IS_FALSE) {
+							opcode = (opcode == ZEND_IS_NOT_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
+							opline = zend_emit_op(NULL, opcode, &right_node, NULL);
+							break;
+						} else if (Z_TYPE(left_node.u.constant) == IS_TRUE) {
+							opcode = (opcode == ZEND_IS_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
+							opline = zend_emit_op(NULL, opcode, &right_node, NULL);
+							break;
+						}
+					} else if (right_node.op_type == IS_CONST) {
+						if (Z_TYPE(right_node.u.constant) == IS_FALSE) {
+							opcode = (opcode == ZEND_IS_NOT_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
+							opline = zend_emit_op(NULL, opcode, &left_node, NULL);
+							break;
+						} else if (Z_TYPE(right_node.u.constant) == IS_TRUE) {
+							opcode = (opcode == ZEND_IS_EQUAL) ? ZEND_BOOL : ZEND_BOOL_NOT;
+							opline = zend_emit_op(NULL, opcode, &left_node, NULL);
+							break;
+						}
+					}
+				}
+
+				if (ast->attr & ZEND_COMPARE_GREATER) {
+					opline = zend_emit_op(NULL, opcode, &right_node, &left_node);
+					opline->extended_value |= ZEND_COMPARE_GREATER;
+				} else {
+					opline = zend_emit_op(NULL, opcode, &left_node, &right_node);
+				}
+			} while (0);
+
+			if (left_ast->kind != ZEND_AST_COMPARE_OP || left_node.op_type == IS_CONST) {
+				zend_make_tmp_result(result, opline);
+			} else {
+				SET_NODE(opline->result, result);
+			}
+
+			if (ast->attr & ZEND_COMPARE_CONTINUE) {
+				opline->extended_value |= ZEND_COMPARE_CONTINUE;
+			}
+
+			if (left_ast->kind == ZEND_AST_COMPARE_OP && left_node.op_type != IS_CONST) {
+				if (result->op_type == IS_TMP_VAR) {
+					SET_NODE(right_opline_jmpz->result, result);
+				} else {
+					right_opline_jmpz->result.var = get_temporary_variable(CG(active_op_array));
+					right_opline_jmpz->result_type = IS_TMP_VAR;
+				}
+				zend_update_jump_target_to_next(right_opnum_jmpz);
+			}
+		}
+	}
+
+	if (left_node.op_type == IS_CONST) {
+		zval_ptr_dtor(&left_node.u.constant);
+	}
+
+	if (right_node.op_type == IS_CONST) {
+		zval_ptr_dtor(&right_node.u.constant);
+	}
 }
 /* }}} */
 
@@ -7549,7 +7638,7 @@ void zend_compile_magic_const(znode *result, zend_ast *ast) /* {{{ */
 zend_bool zend_is_allowed_in_const_expr(zend_ast_kind kind) /* {{{ */
 {
 	return kind == ZEND_AST_ZVAL || kind == ZEND_AST_BINARY_OP
-		|| kind == ZEND_AST_GREATER || kind == ZEND_AST_GREATER_EQUAL
+		|| kind == ZEND_AST_COMPARE_OP
 		|| kind == ZEND_AST_AND || kind == ZEND_AST_OR
 		|| kind == ZEND_AST_UNARY_OP
 		|| kind == ZEND_AST_UNARY_PLUS || kind == ZEND_AST_UNARY_MINUS
@@ -7884,16 +7973,15 @@ void zend_compile_expr(znode *result, zend_ast *ast) /* {{{ */
 		case ZEND_AST_BINARY_OP:
 			zend_compile_binary_op(result, ast);
 			return;
-		case ZEND_AST_GREATER:
-		case ZEND_AST_GREATER_EQUAL:
-			zend_compile_greater(result, ast);
-			return;
 		case ZEND_AST_UNARY_OP:
 			zend_compile_unary_op(result, ast);
 			return;
 		case ZEND_AST_UNARY_PLUS:
 		case ZEND_AST_UNARY_MINUS:
 			zend_compile_unary_pm(result, ast);
+			return;
+		case ZEND_AST_COMPARE_OP:
+			zend_compile_compare_op(result, ast);
 			return;
 		case ZEND_AST_AND:
 		case ZEND_AST_OR:
@@ -8055,16 +8143,24 @@ void zend_eval_const_expr(zend_ast **ast_ptr) /* {{{ */
 				return;
 			}
 			break;
-		case ZEND_AST_GREATER:
-		case ZEND_AST_GREATER_EQUAL:
+        case ZEND_AST_COMPARE_OP:
 			zend_eval_const_expr(&ast->child[0]);
 			zend_eval_const_expr(&ast->child[1]);
 			if (ast->child[0]->kind != ZEND_AST_ZVAL || ast->child[1]->kind != ZEND_AST_ZVAL) {
 				return;
 			}
 
-			zend_ct_eval_greater(&result, ast->kind,
-				zend_ast_get_zval(ast->child[0]), zend_ast_get_zval(ast->child[1]));
+			if (ast->attr & ZEND_COMPARE_GREATER) {
+				if (!zend_try_ct_eval_binary_op(&result, ast->attr & ~ZEND_COMPARE_OP_MASK,
+							zend_ast_get_zval(ast->child[1]), zend_ast_get_zval(ast->child[0]))) {
+					return;
+				}
+			} else {
+				if (!zend_try_ct_eval_binary_op(&result, ast->attr & ~ZEND_COMPARE_OP_MASK,
+							zend_ast_get_zval(ast->child[0]), zend_ast_get_zval(ast->child[1]))) {
+					return;
+				}
+			}
 			break;
 		case ZEND_AST_AND:
 		case ZEND_AST_OR:

@@ -2787,7 +2787,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPZ_EX_SPEC_CONST_HANDLER(ZEN
 	USE_OPLINE
 
 	zval *val;
-	int ret;
+    int ret;
 
 	val = EX_CONSTANT(opline->op1);
 
@@ -2809,7 +2809,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPZ_EX_SPEC_CONST_HANDLER(ZEN
 	SAVE_OPLINE();
 	ret = i_zend_is_true(val);
 
-	if (ret) {
+	if (UNEXPECTED(((opline - 1)->extended_value & ZEND_COMPARE_CONTINUE)) && (ret || Z_LVAL_P(val) == 0)) {
+		opline++;
+	} else if (ret) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 		opline++;
 	} else {
@@ -2824,7 +2826,6 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPNZ_EX_SPEC_CONST_HANDLER(ZE
 	USE_OPLINE
 
 	zval *val;
-	int ret;
 
 	val = EX_CONSTANT(opline->op1);
 
@@ -2844,15 +2845,14 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPNZ_EX_SPEC_CONST_HANDLER(ZE
 	}
 
 	SAVE_OPLINE();
-	ret = i_zend_is_true(val);
-
-	if (ret) {
+	if (i_zend_is_true(val)) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 		opline = OP_JMP_ADDR(opline, opline->op2);
 	} else {
 		ZVAL_FALSE(EX_VAR(opline->result.var));
 		opline++;
 	}
+
 	ZEND_VM_JMP(opline);
 }
 
@@ -3175,7 +3175,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_BOOL_SPEC_CONST_HANDLER(ZEND_O
 	if (Z_TYPE_INFO_P(val) == IS_TRUE) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 	} else if (EXPECTED(Z_TYPE_INFO_P(val) <= IS_TRUE)) {
-		ZVAL_FALSE(EX_VAR(opline->result.var));
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE))) {
+			ZVAL_COPY(EX_VAR(opline->result.var), val);
+		} else {
+			ZVAL_FALSE(EX_VAR(opline->result.var));
+		}
 		if (IS_CONST == IS_CV && UNEXPECTED(Z_TYPE_INFO_P(val) == IS_UNDEF)) {
 			SAVE_OPLINE();
 			GET_OP1_UNDEF_CV(val, BP_VAR_R);
@@ -4497,7 +4501,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CONST_CONST_
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -4515,7 +4523,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CONST_CO
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -4567,8 +4579,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CONST_CONST_HAND
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -4581,7 +4597,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CONST_CONST_HAND
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -4635,8 +4655,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CONST_CONST_
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -4649,7 +4673,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CONST_CONST_
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -4685,8 +4713,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CONST_CONST_HA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -4699,7 +4735,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CONST_CONST_HA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -4735,8 +4780,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CONST
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -4749,7 +4802,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CONST
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -6467,7 +6529,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CONST_TMP_HA
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -6485,7 +6551,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CONST_TM
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -6639,7 +6709,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CONST_VAR_HA
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -6657,7 +6731,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CONST_VA
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -8344,7 +8422,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CONST_CV_HAN
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -8362,7 +8444,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CONST_CV
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -8414,8 +8500,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CONST_CV_HANDLER
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -8428,7 +8518,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CONST_CV_HANDLER
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -8482,8 +8576,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CONST_CV_HAN
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -8496,7 +8594,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CONST_CV_HAN
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -8532,8 +8634,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CONST_CV_HANDL
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -8546,7 +8656,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CONST_CV_HANDL
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -8582,8 +8701,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CONST
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -8596,7 +8723,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CONST
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -10403,8 +10539,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CONST_TMPVAR_HAN
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -10417,7 +10557,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CONST_TMPVAR_HAN
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -10471,8 +10615,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CONST_TMPVAR
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -10485,7 +10633,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CONST_TMPVAR
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -10521,8 +10673,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CONST_TMPVAR_H
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -10535,7 +10695,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CONST_TMPVAR_H
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -10571,8 +10740,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CONST
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -10585,7 +10762,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CONST
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -13240,7 +13426,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_TMP_CONST_HA
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -13258,7 +13448,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_CONS
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -13776,7 +13970,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_TMP_TMP_HAND
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -13794,7 +13992,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_TMP_
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -13948,7 +14150,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_TMP_VAR_HAND
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -13966,7 +14172,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_VAR_
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -14471,7 +14681,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_TMP_CV_HANDL
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -14489,7 +14703,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_TMP_CV_H
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -17301,7 +17519,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_CONST_HA
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -17319,7 +17541,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_CONS
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -19888,7 +20114,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_TMP_HAND
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -19906,7 +20136,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_TMP_
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -20117,7 +20351,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_VAR_HAND
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -20135,7 +20373,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_VAR_
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -21530,7 +21772,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_VAR_CV_HANDL
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -21548,7 +21794,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_VAR_CV_H
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -32883,7 +33133,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPZ_EX_SPEC_CV_HANDLER(ZEND_O
 	USE_OPLINE
 
 	zval *val;
-	int ret;
+    int ret;
 
 	val = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
 
@@ -32905,7 +33155,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPZ_EX_SPEC_CV_HANDLER(ZEND_O
 	SAVE_OPLINE();
 	ret = i_zend_is_true(val);
 
-	if (ret) {
+	if (UNEXPECTED(((opline - 1)->extended_value & ZEND_COMPARE_CONTINUE)) && (ret || Z_LVAL_P(val) == 0)) {
+		opline++;
+	} else if (ret) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 		opline++;
 	} else {
@@ -32920,7 +33172,6 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPNZ_EX_SPEC_CV_HANDLER(ZEND_
 	USE_OPLINE
 
 	zval *val;
-	int ret;
 
 	val = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
 
@@ -32940,15 +33191,14 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPNZ_EX_SPEC_CV_HANDLER(ZEND_
 	}
 
 	SAVE_OPLINE();
-	ret = i_zend_is_true(val);
-
-	if (ret) {
+	if (i_zend_is_true(val)) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 		opline = OP_JMP_ADDR(opline, opline->op2);
 	} else {
 		ZVAL_FALSE(EX_VAR(opline->result.var));
 		opline++;
 	}
+
 	ZEND_VM_JMP(opline);
 }
 
@@ -33357,7 +33607,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_BOOL_SPEC_CV_HANDLER(ZEND_OPCO
 	if (Z_TYPE_INFO_P(val) == IS_TRUE) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 	} else if (EXPECTED(Z_TYPE_INFO_P(val) <= IS_TRUE)) {
-		ZVAL_FALSE(EX_VAR(opline->result.var));
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE))) {
+			ZVAL_COPY(EX_VAR(opline->result.var), val);
+		} else {
+			ZVAL_FALSE(EX_VAR(opline->result.var));
+		}
 		if (IS_CV == IS_CV && UNEXPECTED(Z_TYPE_INFO_P(val) == IS_UNDEF)) {
 			SAVE_OPLINE();
 			GET_OP1_UNDEF_CV(val, BP_VAR_R);
@@ -34642,7 +34896,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_CONST_HAN
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -34660,7 +34918,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_CONST
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -34712,8 +34974,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CV_CONST_HANDLER
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -34726,7 +34992,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CV_CONST_HANDLER
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -34780,8 +35050,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CV_CONST_HAN
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -34794,7 +35068,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CV_CONST_HAN
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -34830,8 +35108,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CV_CONST_HANDL
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -34844,7 +35130,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CV_CONST_HANDL
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -34880,8 +35175,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CV_CO
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -34894,7 +35197,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CV_CO
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -38351,7 +38663,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_TMP_HANDL
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -38369,7 +38685,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_TMP_H
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -38579,7 +38899,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_VAR_HANDL
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -38597,7 +38921,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_VAR_H
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -40929,7 +41257,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_IDENTICAL_SPEC_CV_CV_HANDLE
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -40947,7 +41279,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_IDENTICAL_SPEC_CV_CV_HA
 
 
 	ZEND_VM_SMART_BRANCH(result, 1);
-	ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+		ZVAL_COPY(EX_VAR(opline->result.var), op2);
+	} else {
+		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+	}
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
@@ -40999,8 +41335,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CV_CV_HANDLER(ZE
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -41013,7 +41353,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CV_CV_HANDLER(ZE
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -41067,8 +41411,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CV_CV_HANDLE
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -41081,7 +41429,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CV_CV_HANDLE
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -41117,8 +41469,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CV_CV_HANDLER(
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -41131,7 +41491,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CV_CV_HANDLER(
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -41167,8 +41536,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CV_CV
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -41181,7 +41558,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CV_CV
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
 
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -44656,8 +45042,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CV_TMPVAR_HANDLE
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -44670,7 +45060,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_CV_TMPVAR_HANDLE
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -44724,8 +45118,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CV_TMPVAR_HA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -44738,7 +45136,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_CV_TMPVAR_HA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -44774,8 +45176,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CV_TMPVAR_HAND
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -44788,7 +45198,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_CV_TMPVAR_HAND
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -44824,8 +45243,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CV_TM
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -44838,7 +45265,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_CV_TM
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
 
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -47880,7 +48316,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPZ_EX_SPEC_TMPVAR_HANDLER(ZE
 	USE_OPLINE
 	zend_free_op free_op1;
 	zval *val;
-	int ret;
+    int ret;
 
 	val = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
 
@@ -47902,7 +48338,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPZ_EX_SPEC_TMPVAR_HANDLER(ZE
 	SAVE_OPLINE();
 	ret = i_zend_is_true(val);
 	zval_ptr_dtor_nogc(free_op1);
-	if (ret) {
+	if (UNEXPECTED(((opline - 1)->extended_value & ZEND_COMPARE_CONTINUE)) && (ret || Z_LVAL_P(val) == 0)) {
+		opline++;
+	} else if (ret) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 		opline++;
 	} else {
@@ -47917,7 +48355,6 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPNZ_EX_SPEC_TMPVAR_HANDLER(Z
 	USE_OPLINE
 	zend_free_op free_op1;
 	zval *val;
-	int ret;
 
 	val = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
 
@@ -47937,15 +48374,14 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_JMPNZ_EX_SPEC_TMPVAR_HANDLER(Z
 	}
 
 	SAVE_OPLINE();
-	ret = i_zend_is_true(val);
-	zval_ptr_dtor_nogc(free_op1);
-	if (ret) {
+	if (i_zend_is_true(val)) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 		opline = OP_JMP_ADDR(opline, opline->op2);
 	} else {
 		ZVAL_FALSE(EX_VAR(opline->result.var));
 		opline++;
 	}
+	zval_ptr_dtor_nogc(free_op1);
 	ZEND_VM_JMP(opline);
 }
 
@@ -47999,7 +48435,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_BOOL_SPEC_TMPVAR_HANDLER(ZEND_
 	if (Z_TYPE_INFO_P(val) == IS_TRUE) {
 		ZVAL_TRUE(EX_VAR(opline->result.var));
 	} else if (EXPECTED(Z_TYPE_INFO_P(val) <= IS_TRUE)) {
-		ZVAL_FALSE(EX_VAR(opline->result.var));
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE))) {
+			ZVAL_COPY(EX_VAR(opline->result.var), val);
+		} else {
+			ZVAL_FALSE(EX_VAR(opline->result.var));
+		}
 		if ((IS_TMP_VAR|IS_VAR) == IS_CV && UNEXPECTED(Z_TYPE_INFO_P(val) == IS_UNDEF)) {
 			SAVE_OPLINE();
 			GET_OP1_UNDEF_CV(val, BP_VAR_R);
@@ -48608,8 +49048,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_TMPVAR_CONST_HAN
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -48622,7 +49066,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_TMPVAR_CONST_HAN
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -48676,8 +49124,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_TMPVAR_CONST
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -48690,7 +49142,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_TMPVAR_CONST
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -48726,8 +49182,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_TMPVAR_CONST_H
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -48740,7 +49204,17 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_TMPVAR_CONST_H
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
+
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -48776,8 +49250,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_TMPVA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -48790,7 +49272,17 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_TMPVA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
+
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -50939,8 +51431,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_TMPVAR_CV_HANDLE
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -50953,7 +51449,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_TMPVAR_CV_HANDLE
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -51007,8 +51507,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_TMPVAR_CV_HA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -51021,7 +51525,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_TMPVAR_CV_HA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -51057,8 +51565,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_TMPVAR_CV_HAND
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -51071,7 +51587,17 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_TMPVAR_CV_HAND
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
+
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -51107,8 +51633,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_TMPVA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -51121,7 +51655,17 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_TMPVA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
+
 	zval_ptr_dtor_nogc(free_op1);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -52230,8 +52774,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_TMPVAR_TMPVAR_HA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -52244,7 +52792,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_EQUAL_SPEC_TMPVAR_TMPVAR_HA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) == 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) == 0);
+	}
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -52298,8 +52850,12 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_TMPVAR_TMPVA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && result)) {
+			ZVAL_COPY(EX_VAR(opline->result.var), op2);
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -52312,7 +52868,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_NOT_EQUAL_SPEC_TMPVAR_TMPVA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	if (UNEXPECTED((opline->extended_value & ZEND_COMPARE_CONTINUE) && (Z_LVAL_P(result) != 0))) {
+		ZVAL_COPY(result, op2);
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) != 0);
+	}
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -52348,8 +52908,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_TMPVAR_TMPVAR_
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -52362,7 +52930,17 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_SPEC_TMPVAR_TMPVAR_
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 < Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) < 0);
+	}
+
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
@@ -52398,8 +52976,16 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_TMPVA
 		} else {
 			break;
 		}
-		ZEND_VM_SMART_BRANCH(result, 0);
-		ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && result) {
+			if (opline->extended_value & ZEND_COMPARE_GREATER) {
+				ZVAL_COPY(EX_VAR(opline->result.var), op1);
+			} else {
+				ZVAL_COPY(EX_VAR(opline->result.var), op2);
+			}
+		} else {
+			ZEND_VM_SMART_BRANCH(result, 0);
+			ZVAL_BOOL(EX_VAR(opline->result.var), result);
+		}
 		ZEND_VM_NEXT_OPCODE();
 	} while (0);
 
@@ -52412,7 +52998,17 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_IS_SMALLER_OR_EQUAL_SPEC_TMPVA
 	}
 	result = EX_VAR(opline->result.var);
 	compare_function(result, op1, op2);
-	ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+
+	if ((opline->extended_value & ZEND_COMPARE_CONTINUE) && (0 <= Z_LVAL_P(result))) {
+		if (opline->extended_value & ZEND_COMPARE_GREATER) {
+			ZVAL_COPY(result, op1);
+		} else {
+			ZVAL_COPY(result, op2);
+		}
+	} else {
+		ZVAL_BOOL(result, Z_LVAL_P(result) <= 0);
+	}
+
 	zval_ptr_dtor_nogc(free_op1);
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
