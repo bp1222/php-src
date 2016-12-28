@@ -2661,6 +2661,7 @@ static void zend_separate_if_call_and_write(znode *node, zend_ast *ast, uint32_t
 void zend_delayed_compile_var(znode *result, zend_ast *ast, uint32_t type);
 void zend_compile_assign(znode *result, zend_ast *ast);
 static void zend_compile_list_assign(znode *result, zend_ast *ast, znode *expr_node, zend_bool old_style);
+static inline void zend_emit_assign_ref_znode(zend_ast *var_ast, znode *value_node);
 
 static inline void zend_emit_assign_znode(zend_ast *var_ast, znode *value_node) /* {{{ */
 {
@@ -2821,6 +2822,7 @@ static void zend_compile_list_assign(
 	zend_bool has_elems = 0;
 	zend_bool is_keyed =
 		list->children > 0 && list->child[0] != NULL && list->child[0]->child[1] != NULL;
+	zend_op *opline;
 
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *elem_ast = list->child[i];
@@ -2834,10 +2836,6 @@ static void zend_compile_list_assign(
 			} else {
 				continue;
 			}
-		}
-
-		if (elem_ast->attr) {
-			zend_error(E_COMPILE_ERROR, "[] and list() assignments cannot be by reference");
 		}
 
 		var_ast = elem_ast->child[0];
@@ -2867,8 +2865,13 @@ static void zend_compile_list_assign(
 
 		zend_verify_list_assign_target(var_ast, old_style);
 
-		zend_emit_op(&fetch_result, ZEND_FETCH_LIST, expr_node, &dim_node);
-		zend_emit_assign_znode(var_ast, &fetch_result);
+		opline = zend_emit_op(&fetch_result, ZEND_FETCH_LIST, expr_node, &dim_node);
+		if (elem_ast->attr) {
+			opline->extended_value = ZEND_RETURNS_REFERENCE;
+			zend_emit_assign_ref_znode(var_ast, &fetch_result);
+		} else {
+			zend_emit_assign_znode(var_ast, &fetch_result);
+		}
 	}
 
 	if (has_elems == 0) {

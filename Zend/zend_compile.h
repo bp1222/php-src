@@ -398,10 +398,6 @@ struct _zend_op_array {
 	void *reserved[ZEND_MAX_RESERVED_RESOURCES];
 };
 
-
-#define ZEND_RETURN_VALUE				0
-#define ZEND_RETURN_REFERENCE			1
-
 typedef struct _zend_internal_function {
 	/* Common elements */
 	zend_uchar type;
@@ -959,12 +955,12 @@ static zend_always_inline int zend_check_arg_send_type(const zend_function *zf, 
 #define QUICK_ARG_MAY_BE_SENT_BY_REF(zf, arg_num) \
 	ZEND_CHECK_ARG_FLAG(zf, arg_num, ZEND_SEND_PREFER_REF)
 
-#define ZEND_RETURN_VAL 0
-#define ZEND_RETURN_REF 1
+#define ZEND_RETURN_VALUE				0
+#define ZEND_RETURN_REFERENCE			1
 
-
-#define ZEND_RETURNS_FUNCTION 1<<0
-#define ZEND_RETURNS_VALUE    1<<1
+#define ZEND_RETURNS_FUNCTION       (1<<0)
+#define ZEND_RETURNS_VALUE          (1<<1)
+#define ZEND_RETURNS_REFERENCE      (1<<2)
 
 #define ZEND_ARRAY_ELEMENT_REF		(1<<0)
 #define ZEND_ARRAY_NOT_PACKED		(1<<1)

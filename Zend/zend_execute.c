@@ -1728,7 +1728,7 @@ fetch_from_array:
 			} else if (EXPECTED(retval && Z_TYPE_P(retval) != IS_UNDEF)) {
 				if (!Z_ISREF_P(retval)) {
 					if (Z_REFCOUNTED_P(retval) &&
-					    Z_REFCOUNT_P(retval) > 1) {
+						Z_REFCOUNT_P(retval) > 1) {
 						if (Z_TYPE_P(retval) != IS_OBJECT) {
 							Z_DELREF_P(retval);
 							ZVAL_DUP(result, retval);
