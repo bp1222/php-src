@@ -21,33 +21,18 @@ class StorageRef implements ArrayAccess {
 }
 
 $a = new StorageNoRef([1, 2]);
-list($one, $two) = $a;
-$one++;
-var_dump($a);
-unset($one, $two);
-
 list(&$one, $two) = $a;
 $one++;
 var_dump($a);
 unset($one, $two);
 
 $a = new StorageRef([1, 2]);
-list($one, $two) = $a;
-$one++;
-var_dump($a);
-unset($one, $two);
-
 list(&$one, $two) = $a;
 $one++;
 var_dump($a);
 unset($one, $two);
 
 $a = new StorageRef(['two' => 2, 'one' => 1]);
-list('one' => $one, 'two' => $two) = $a;
-$one++;
-var_dump($a);
-unset($one, $two);
-
 list('one' => &$one, 'two' => $two) = $a;
 $one++;
 var_dump($a);
@@ -58,10 +43,16 @@ var_dump($a);
 $three = 3;
 var_dump($a);
 unset($one, $two, $three);
+
+$a = new StorageRef([['one' => 1, 'two' => 2]]);
+list(list('one' => &$one, 'two' => $two)) = $a;
+var_dump($a);
+unset($one, $two);
 ?>
 --EXPECTF--
-object(StorageNoRef)#%d (%d) {
-  [%s]=>
+Warning: Attempting to assign list() variable by reference, but reference is unavailable in %s on line %d
+object(StorageNoRef)#1 (1) {
+  ["s":"StorageNoRef":private]=>
   array(2) {
     [0]=>
     int(1)
@@ -69,28 +60,8 @@ object(StorageNoRef)#%d (%d) {
     int(2)
   }
 }
-
-Notice: Indirect modification of overloaded element of StorageNoRef has no effect in %s on line %d
-object(StorageNoRef)#%d (%d) {
-  [%s]=>
-  array(2) {
-    [0]=>
-    int(1)
-    [1]=>
-    int(2)
-  }
-}
-object(StorageRef)#%d (%d) {
-  [%s]=>
-  array(2) {
-    [0]=>
-    int(1)
-    [1]=>
-    int(2)
-  }
-}
-object(StorageRef)#%d (%d) {
-  [%s]=>
+object(StorageRef)#2 (1) {
+  ["s":"StorageRef":private]=>
   array(2) {
     [0]=>
     &int(2)
@@ -98,17 +69,8 @@ object(StorageRef)#%d (%d) {
     int(2)
   }
 }
-object(StorageRef)#%d (%d) {
-  [%s]=>
-  array(2) {
-    ["two"]=>
-    int(2)
-    ["one"]=>
-    int(1)
-  }
-}
-object(StorageRef)#%d (%d) {
-  [%s]=>
+object(StorageRef)#1 (1) {
+  ["s":"StorageRef":private]=>
   array(2) {
     ["two"]=>
     int(2)
@@ -116,8 +78,8 @@ object(StorageRef)#%d (%d) {
     &int(2)
   }
 }
-object(StorageRef)#%d (%d) {
-  [%s]=>
+object(StorageRef)#1 (1) {
+  ["s":"StorageRef":private]=>
   array(3) {
     ["two"]=>
     int(2)
@@ -127,8 +89,8 @@ object(StorageRef)#%d (%d) {
     &NULL
   }
 }
-object(StorageRef)#%d (%d) {
-  [%s]=>
+object(StorageRef)#1 (1) {
+  ["s":"StorageRef":private]=>
   array(3) {
     ["two"]=>
     int(2)
@@ -136,5 +98,17 @@ object(StorageRef)#%d (%d) {
     int(2)
     ["three"]=>
     &int(3)
+  }
+}
+object(StorageRef)#2 (1) {
+  ["s":"StorageRef":private]=>
+  array(1) {
+    [0]=>
+    array(2) {
+      ["one"]=>
+      &int(1)
+      ["two"]=>
+      int(2)
+    }
   }
 }

@@ -2103,8 +2103,11 @@ ZEND_VM_HANDLER(98, ZEND_FETCH_LIST, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 		zend_fetch_dimension_address_read_LIST(&retval, container, GET_OP2_ZVAL_PTR_UNDEF(BP_VAR_R), type, indirect);
 	}
 
-	//*(EX_VAR(opline->result.var)) = retval;
-    ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
+		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	}
+
+	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
 	FREE_OP2();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
