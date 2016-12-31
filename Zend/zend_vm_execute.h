@@ -5279,22 +5279,36 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_FUNC_ARG_SPEC_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, EX_CONSTANT(opline->op2), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, EX_CONSTANT(opline->op2), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -9234,22 +9248,36 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_FUNC_ARG_SPEC_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -11238,22 +11266,36 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_FUNC_ARG_SPEC_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_TMPVAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 	zend_free_op free_op2;
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -36411,22 +36453,36 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_UNSET_SPEC_CV_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, EX_CONSTANT(opline->op2), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, EX_CONSTANT(opline->op2), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -42806,22 +42862,36 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_UNSET_SPEC_CV_CV_HAN
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -46482,22 +46552,36 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_UNSET_SPEC_CV_TMPVAR
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_TMPVAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 	zend_free_op free_op2;
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -49723,22 +49807,36 @@ fetch_obj_is_no_object:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 	zend_free_op free_op1;
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, EX_CONSTANT(opline->op2), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, EX_CONSTANT(opline->op2), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -52160,22 +52258,36 @@ fetch_obj_is_no_object:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 	zend_free_op free_op1;
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
@@ -53465,22 +53577,36 @@ fetch_obj_is_no_object:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_TMPVAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
+	zend_op *next_op = opline + 1;
 	zend_free_op free_op1, free_op2;
 	zval *container, retval;
-	int type = (opline->extended_value & ZEND_LIST_MAKE_WRITABLE) ? BP_VAR_RW : BP_VAR_R;
-	int indirect = (opline->extended_value & ZEND_LIST_KEEP_INDIRECT != 0);
+	int type;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
 
-	if (Z_TYPE_P(container) == IS_INDIRECT) {
-		zend_fetch_dimension_address_read_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type, indirect);
-	} else {
-		zend_fetch_dimension_address_read_LIST(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type, indirect);
-	}
+	do {
+		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+			type = BP_VAR_W;
+		} else {
+			type = BP_VAR_R;
+list_check_next_code:
+			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
+				break;
+			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
+				type = BP_VAR_W;
+				break;
+			} else {
+				next_op = next_op + 1;
+				goto list_check_next_code;
+			}
+		}
+	} while (0);
 
-	if (opline->extended_value & ZEND_LIST_MAKE_WRITABLE && !(Z_TYPE(retval) == IS_REFERENCE || Z_TYPE(retval) == IS_INDIRECT)) {
-		zend_error(E_WARNING, "Attempting to assign list() variable by reference, but reference is unavailable");
+	if (Z_TYPE_P(container) == IS_INDIRECT) {
+		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
+	} else {
+		zend_fetch_dimension_address_LIST(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
 	}
 
 	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);

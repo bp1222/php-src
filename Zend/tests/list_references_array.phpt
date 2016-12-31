@@ -31,6 +31,26 @@ list(list(&$one, $two)) = $a;
 $one++;
 var_dump($a);
 unset($one, $two);
+
+$a = [1, 2];
+list(,, list($var)) = $a;
+var_dump($a);
+var_dump($var);
+unset($var);
+list(,, list(&$var)) = $a;
+var_dump($a);
+var_dump($var);
+unset($var, $a);
+
+$a = [1, 2, [3]];
+list(,, list(, $var)) = $a;
+var_dump($a);
+var_dump($var);
+unset($var);
+list(,, list(, &$var)) = $a;
+var_dump($a);
+var_dump($var);
+unset($var, $a);
 ?>
 --EXPECTF--
 array(2) {
@@ -39,8 +59,6 @@ array(2) {
   [1]=>
   int(2)
 }
-
-Notice: Undefined offset: 2 in %s on line %d
 array(3) {
   [0]=>
   int(2)
@@ -63,8 +81,6 @@ array(2) {
   ["one"]=>
   &int(2)
 }
-
-Notice: Undefined index: three in %s on line %d
 array(3) {
   ["two"]=>
   int(2)
@@ -90,3 +106,52 @@ array(1) {
     int(2)
   }
 }
+
+Notice: Undefined offset: 2 in %s on line %d
+array(2) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
+}
+NULL
+array(3) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
+  [2]=>
+  array(1) {
+    [0]=>
+    &NULL
+  }
+}
+NULL
+
+Notice: Undefined offset: 1 in %s on line %d
+array(3) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
+  [2]=>
+  array(1) {
+    [0]=>
+    int(3)
+  }
+}
+NULL
+array(3) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
+  [2]=>
+  array(2) {
+    [0]=>
+    int(3)
+    [1]=>
+    &NULL
+  }
+}
+NULL
