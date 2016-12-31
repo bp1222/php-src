@@ -48,9 +48,23 @@ $a = new StorageRef([['one' => 1, 'two' => 2]]);
 list(list('one' => &$one, 'two' => $two)) = $a;
 var_dump($a);
 unset($one, $two);
+
+$a = new StorageRef([1, 2]);
+list(,,list($var)) = $a;
+var_dump($a);
+$a = new StorageRef([1, 2]);
+list(,,list(&$var)) = $a;
+var_dump($a);
+
+$a = new StorageNoRef([1, 2]);
+list(,,list($var)) = $a;
+var_dump($a);
+$a = new StorageNoRef([1, 2]);
+list(,,list(&$var)) = $a;
+var_dump($a);
 ?>
 --EXPECTF--
-Warning: Attempting to assign list() variable by reference, but reference is unavailable in %s on line %d
+Notice: Indirect modification of overloaded element of StorageNoRef has no effect in %s on line %d
 object(StorageNoRef)#1 (1) {
   ["s":"StorageNoRef":private]=>
   array(2) {
@@ -110,5 +124,54 @@ object(StorageRef)#2 (1) {
       ["two"]=>
       int(2)
     }
+  }
+}
+object(StorageRef)#1 (1) {
+  ["s":"StorageRef":private]=>
+  array(3) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
+    [2]=>
+    NULL
+  }
+}
+object(StorageRef)#2 (1) {
+  ["s":"StorageRef":private]=>
+  array(3) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
+    [2]=>
+    array(1) {
+      [0]=>
+      &NULL
+    }
+  }
+}
+
+Notice: Undefined offset: 2 in %s on line %d
+object(StorageNoRef)#1 (1) {
+  ["s":"StorageNoRef":private]=>
+  array(2) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
+  }
+}
+
+Notice: Undefined offset: 2 in %s on line %d
+
+Notice: Indirect modification of overloaded element of StorageNoRef has no effect in %s on line %d
+object(StorageNoRef)#2 (1) {
+  ["s":"StorageNoRef":private]=>
+  array(2) {
+    [0]=>
+    int(1)
+    [1]=>
+    int(2)
   }
 }
