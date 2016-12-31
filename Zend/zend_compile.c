@@ -2867,9 +2867,12 @@ static void zend_compile_list_assign(
 
 		opline = zend_emit_op(&fetch_result, ZEND_FETCH_LIST, expr_node, &dim_node);
 		if (elem_ast->attr) {
-			opline->extended_value = ZEND_RETURNS_REFERENCE;
+			opline->extended_value = ZEND_LIST_KEEP_INDIRECT | ZEND_LIST_MAKE_WRITABLE;
 			zend_emit_assign_ref_znode(var_ast, &fetch_result);
 		} else {
+			if (var_ast->kind == ZEND_AST_ARRAY) {
+				opline->extended_value = ZEND_LIST_KEEP_INDIRECT;
+			}
 			zend_emit_assign_znode(var_ast, &fetch_result);
 		}
 	}
