@@ -2089,31 +2089,12 @@ ZEND_VM_HANDLER(97, ZEND_FETCH_OBJ_UNSET, VAR|UNUSED|THIS|CV, CONST|TMPVAR|CV)
 ZEND_VM_HANDLER(98, ZEND_FETCH_LIST, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 	zend_free_op free_op1, free_op2;
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_R);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-ZEND_VM_C_LABEL(list_check_next_code):
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				ZEND_VM_C_GOTO(list_check_next_code);
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), GET_OP2_ZVAL_PTR_UNDEF(BP_VAR_R), type);

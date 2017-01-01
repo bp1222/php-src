@@ -2822,7 +2822,7 @@ static void zend_compile_list_assign(
 	zend_bool has_elems = 0;
 	zend_bool is_keyed =
 		list->children > 0 && list->child[0] != NULL && list->child[0]->child[1] != NULL;
-	zend_op *opline;
+	zend_op *opline, *prev_op;
 
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *elem_ast = list->child[i];
@@ -2868,6 +2868,13 @@ static void zend_compile_list_assign(
 		opline = zend_emit_op(&fetch_result, ZEND_FETCH_LIST, expr_node, &dim_node);
 		if (elem_ast->attr) {
 			opline->extended_value = ZEND_LIST_MAKE_WRITABLE;
+			prev_op = (opline - 1);
+			do {
+				if (prev_op->opcode != ZEND_FETCH_LIST) {
+					break;
+				}
+				prev_op->extended_value = ZEND_LIST_MAKE_WRITABLE;
+			} while ((prev_op = (prev_op - 1)) != NULL);
 			zend_emit_assign_ref_znode(var_ast, &fetch_result);
 		} else {
 			zend_emit_assign_znode(var_ast, &fetch_result);

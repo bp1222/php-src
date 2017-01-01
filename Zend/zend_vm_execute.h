@@ -5282,28 +5282,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_CONST_HA
 	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type);
@@ -9251,28 +9233,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_CV_HANDL
 	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
@@ -11269,28 +11233,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_TMPVAR_H
 	zend_op *next_op = opline + 1;
 	zend_free_op free_op2;
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
@@ -36456,28 +36402,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_CONST_HANDL
 	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type);
@@ -42865,28 +42793,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_CV_HANDLER(
 	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
@@ -46555,28 +46465,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_TMPVAR_HAND
 	zend_op *next_op = opline + 1;
 	zend_free_op free_op2;
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
@@ -49810,28 +49702,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_CONST_H
 	zend_op *next_op = opline + 1;
 	zend_free_op free_op1;
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), EX_CONSTANT(opline->op2), type);
@@ -52261,28 +52135,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_CV_HAND
 	zend_op *next_op = opline + 1;
 	zend_free_op free_op1;
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_cv_undef(execute_data, opline->op2.var), type);
@@ -53580,28 +53436,10 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_TMPVAR_
 	zend_op *next_op = opline + 1;
 	zend_free_op free_op1, free_op2;
 	zval *container, retval;
-	int type;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
-
-	do {
-		if (UNEXPECTED(opline->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-			type = BP_VAR_W;
-		} else {
-			type = BP_VAR_R;
-list_check_next_code:
-			if (EXPECTED(next_op->opcode != ZEND_FETCH_LIST)) {
-				break;
-			} else if (UNEXPECTED(next_op->extended_value == ZEND_LIST_MAKE_WRITABLE)) {
-				type = BP_VAR_W;
-				break;
-			} else {
-				next_op = next_op + 1;
-				goto list_check_next_code;
-			}
-		}
-	} while (0);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2), type);
