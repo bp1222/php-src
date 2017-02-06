@@ -2091,7 +2091,7 @@ ZEND_VM_HANDLER(98, ZEND_FETCH_LIST, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 	USE_OPLINE
 	zend_free_op free_op1, free_op2;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_R);

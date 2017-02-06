@@ -5279,10 +5279,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_FUNC_ARG_SPEC_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
@@ -9230,10 +9229,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_FUNC_ARG_SPEC_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
@@ -11230,10 +11228,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_FUNC_ARG_SPEC_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CONST_TMPVAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 	zend_free_op free_op2;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
@@ -36399,10 +36396,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_UNSET_SPEC_CV_CONST_
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
@@ -42790,10 +42786,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_UNSET_SPEC_CV_CV_HAN
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
@@ -46462,10 +46457,9 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_OBJ_UNSET_SPEC_CV_TMPVAR
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_CV_TMPVAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 	zend_free_op free_op2;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
@@ -49699,10 +49693,9 @@ fetch_obj_is_no_object:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 	zend_free_op free_op1;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
@@ -52132,10 +52125,9 @@ fetch_obj_is_no_object:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_CV_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 	zend_free_op free_op1;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
@@ -53433,10 +53425,9 @@ fetch_obj_is_no_object:
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_SPEC_TMPVAR_TMPVAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
-	zend_op *next_op = opline + 1;
 	zend_free_op free_op1, free_op2;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
