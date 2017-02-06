@@ -32,6 +32,12 @@ $one++;
 var_dump($a);
 unset($one, $two);
 
+$a = [[1, 2]];
+[[$one, &$two]] = $a;
+$one++;
+var_dump($a);
+unset($one, $two);
+
 $a = [1, 2];
 list(,, list($var)) = $a;
 var_dump($a);
@@ -104,6 +110,15 @@ array(1) {
     &int(2)
     [1]=>
     int(2)
+  }
+}
+array(1) {
+  [0]=>
+  array(2) {
+    [0]=>
+    int(1)
+    [1]=>
+    &int(2)
   }
 }
 

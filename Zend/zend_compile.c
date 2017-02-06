@@ -2870,10 +2870,23 @@ static void zend_compile_list_assign(
 			opline->extended_value = ZEND_LIST_MAKE_WRITABLE;
 			prev_op = (opline - 1);
 			do {
-				if (prev_op->opcode != ZEND_FETCH_LIST) {
+				if (prev_op->opcode == ZEND_FETCH_LIST) {
+					if (prev_op->op1.var == opline->op1.var) {
+						continue;
+					} else if (prev_op->result.var == opline->op1.var) {
+						if (prev_op->extended_value == ZEND_LIST_MAKE_WRITABLE) {
+							break;
+						}
+						prev_op->extended_value = ZEND_LIST_MAKE_WRITABLE;
+						opline = prev_op;
+						continue;
+					}
+					break;
+				} else if (prev_op->opcode == ZEND_ASSIGN_REF || prev_op->opcode == ZEND_ASSIGN) {
+					continue;
+				} else {
 					break;
 				}
-				prev_op->extended_value = ZEND_LIST_MAKE_WRITABLE;
 			} while ((prev_op = (prev_op - 1)) != NULL);
 			zend_emit_assign_ref_znode(var_ast, &fetch_result);
 		} else {
