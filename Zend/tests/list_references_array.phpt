@@ -196,7 +196,7 @@ array(3) {
 }
 NULL
 
-Warning: Attempting to set reference to non refereancable value in %s on line %d
+Notice: Attempting to set reference to non refereancable value in %s on line %d
 array(2) {
   [0]=>
   int(1)
