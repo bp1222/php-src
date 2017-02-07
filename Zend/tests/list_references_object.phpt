@@ -169,7 +169,7 @@ Notice: Undefined offset: 2 in %s on line %d
 
 Notice: Indirect modification of overloaded element of StorageNoRef has no effect in %s on line %d
 
-Notice: Undefined offset: 0 in %s on line %d
+Notice: Attempting to set reference to non refereancable value in %s on line %d
 object(StorageNoRef)#2 (1) {
   ["s":"StorageNoRef":private]=>
   array(2) {

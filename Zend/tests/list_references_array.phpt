@@ -57,6 +57,21 @@ list(,, list(, &$var)) = $a;
 var_dump($a);
 var_dump($var);
 unset($var, $a);
+
+$a = [1, 2];
+function no_ref(&$a) {
+    return $a;
+}
+
+function &ref(&$a) {
+    return $a;
+}
+
+[&$var] = no_ref($a);
+var_dump($a);
+[&$var] = ref($a);
+var_dump($a);
+
 ?>
 --EXPECTF--
 array(2) {
@@ -180,3 +195,17 @@ array(3) {
   }
 }
 NULL
+
+Warning: Attempting to set reference to non refereancable value in %s on line %d
+array(2) {
+  [0]=>
+  int(1)
+  [1]=>
+  int(2)
+}
+array(2) {
+  [0]=>
+  &int(1)
+  [1]=>
+  int(2)
+}

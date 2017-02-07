@@ -2892,6 +2892,9 @@ static void zend_compile_list_assign(
 		zend_verify_list_assign_target(var_ast, old_style);
 
 		if (elem_ast->attr || (var_ast->kind == ZEND_AST_ARRAY && zend_set_list_assign_reference(var_ast))) {
+			if (expr_node->op_type == IS_CONST || expr_node->op_type == IS_TMP_VAR) {
+				zend_error_noreturn(E_COMPILE_ERROR, "Cannot assign reference to constant or temporary expression in write context");
+			}
 			zend_emit_op(&fetch_result, ZEND_FETCH_LIST_RW, expr_node, &dim_node);
 		} else {
 			zend_emit_op(&fetch_result, ZEND_FETCH_LIST_R, expr_node, &dim_node);
