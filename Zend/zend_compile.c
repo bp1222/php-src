@@ -2821,16 +2821,18 @@ static zend_bool zend_set_list_assign_reference(zend_ast *ast) { /* {{{ */
 
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *elem_ast = list->child[i];
-		zend_ast *var_ast = elem_ast->child[0];
+		if (elem_ast) {
+			zend_ast *var_ast = elem_ast->child[0];
 
-		if (elem_ast->kind == ZEND_AST_ARRAY_ELEM && elem_ast->attr) {
-			has_reference = 1;
-		} else if (elem_ast->kind == ZEND_AST_ARRAY_ELEM && var_ast->kind == ZEND_AST_ARRAY) {
-			has_reference = zend_set_list_assign_reference(var_ast);
-		}
+			if (elem_ast->kind == ZEND_AST_ARRAY_ELEM && elem_ast->attr) {
+				has_reference = 1;
+			} else if (elem_ast->kind == ZEND_AST_ARRAY_ELEM && var_ast->kind == ZEND_AST_ARRAY) {
+				has_reference = zend_set_list_assign_reference(var_ast);
+			}
 
-		if (has_reference) {
-			break;
+			if (has_reference) {
+				break;
+			}
 		}
 	}
 

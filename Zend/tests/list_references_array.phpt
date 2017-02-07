@@ -65,6 +65,8 @@ array(2) {
   [1]=>
   int(2)
 }
+
+Notice: Undefined offset: 2 in %s on line %d
 array(3) {
   [0]=>
   int(2)
@@ -87,6 +89,8 @@ array(2) {
   ["one"]=>
   &int(2)
 }
+
+Notice: Undefined index: three in %s on line %d
 array(3) {
   ["two"]=>
   int(2)
@@ -130,6 +134,10 @@ array(2) {
   int(2)
 }
 NULL
+
+Notice: Undefined offset: 2 in %s on line %d
+
+Notice: Undefined offset: 0 in %s on line %d
 array(3) {
   [0]=>
   int(1)
@@ -156,6 +164,8 @@ array(3) {
   }
 }
 NULL
+
+Notice: Undefined offset: 1 in %s on line %d
 array(3) {
   [0]=>
   int(1)

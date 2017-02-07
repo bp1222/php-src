@@ -137,6 +137,8 @@ object(StorageRef)#1 (1) {
     NULL
   }
 }
+
+Notice: Undefined offset: 0 in %s on line %d
 object(StorageRef)#2 (1) {
   ["s":"StorageRef":private]=>
   array(3) {
@@ -166,6 +168,8 @@ object(StorageNoRef)#1 (1) {
 Notice: Undefined offset: 2 in %s on line %d
 
 Notice: Indirect modification of overloaded element of StorageNoRef has no effect in %s on line %d
+
+Notice: Undefined offset: 0 in %s on line %d
 object(StorageNoRef)#2 (1) {
   ["s":"StorageNoRef":private]=>
   array(2) {
