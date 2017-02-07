@@ -2814,6 +2814,29 @@ static void zend_verify_list_assign_target(zend_ast *var_ast, zend_bool old_styl
 }
 /* }}} */
 
+static zend_bool zend_set_list_assign_reference(zend_ast *ast) {
+    zend_bool has_reference = 0;
+    zend_ast_list *list = zend_ast_get_list(ast);
+    uint32_t i;
+
+    for (i = 0; i < list->children; ++i) {
+        zend_ast *elem_ast = list->child[i];
+        zend_ast *var_ast = elem_ast->child[0];
+
+        if (elem_ast->kind == ZEND_AST_ARRAY_ELEM && elem_ast->attr) {
+            has_reference = 1;
+        } else if (elem_ast->kind == ZEND_AST_ARRAY_ELEM && var_ast->kind == ZEND_AST_ARRAY) {
+            has_reference = zend_set_list_assign_reference(var_ast);
+        }
+
+        if (has_reference) {
+            break;
+        }
+    }
+
+    return has_reference;
+}
+
 static void zend_compile_list_assign(
 		znode *result, zend_ast *ast, znode *expr_node, zend_bool old_style) /* {{{ */
 {
@@ -2822,7 +2845,7 @@ static void zend_compile_list_assign(
 	zend_bool has_elems = 0;
 	zend_bool is_keyed =
 		list->children > 0 && list->child[0] != NULL && list->child[0]->child[1] != NULL;
-	zend_op *opline, *prev_op;
+	zend_op *opline;
 
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *elem_ast = list->child[i];
@@ -2866,28 +2889,12 @@ static void zend_compile_list_assign(
 		zend_verify_list_assign_target(var_ast, old_style);
 
 		opline = zend_emit_op(&fetch_result, ZEND_FETCH_LIST, expr_node, &dim_node);
-		if (elem_ast->attr) {
+
+		if (elem_ast->attr || (var_ast->kind == ZEND_AST_ARRAY && zend_set_list_assign_reference(var_ast))) {
 			opline->extended_value = ZEND_LIST_MAKE_WRITABLE;
-			prev_op = (opline - 1);
-			do {
-				if (prev_op->opcode == ZEND_FETCH_LIST) {
-					if (prev_op->op1.var == opline->op1.var) {
-						continue;
-					} else if (prev_op->result.var == opline->op1.var) {
-						if (prev_op->extended_value == ZEND_LIST_MAKE_WRITABLE) {
-							break;
-						}
-						prev_op->extended_value = ZEND_LIST_MAKE_WRITABLE;
-						opline = prev_op;
-						continue;
-					}
-					break;
-				} else if (prev_op->opcode == ZEND_ASSIGN_REF || prev_op->opcode == ZEND_ASSIGN) {
-					continue;
-				} else {
-					break;
-				}
-			} while ((prev_op = (prev_op - 1)) != NULL);
+		}
+
+		if (elem_ast->attr) {
 			zend_emit_assign_ref_znode(var_ast, &fetch_result);
 		} else {
 			zend_emit_assign_znode(var_ast, &fetch_result);

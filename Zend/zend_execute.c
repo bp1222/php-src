@@ -1923,7 +1923,7 @@ static zend_never_inline void zend_fetch_dimension_address_read_IS(zval *result,
 
 static zend_never_inline void zend_fetch_dimension_address_LIST(zval *result, zval *container, zval *dim, int type)
 {
-    if (type == BP_VAR_W) {
+    if (type == BP_VAR_RW) {
         zend_fetch_dimension_address(result, container, dim, IS_TMP_VAR, type);
     } else {
         zend_fetch_dimension_address_read(result, container, dim, IS_TMP_VAR, type, 0, 0);

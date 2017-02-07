@@ -2091,10 +2091,10 @@ ZEND_VM_HANDLER(98, ZEND_FETCH_LIST, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
 	USE_OPLINE
 	zend_free_op free_op1, free_op2;
 	zval *container, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_W : BP_VAR_R;
+	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_RW : BP_VAR_R;
 
 	SAVE_OPLINE();
-	container = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_R);
+	container = GET_OP1_ZVAL_PTR_UNDEF(type);
 
 	if (Z_TYPE_P(container) == IS_INDIRECT) {
 		zend_fetch_dimension_address_LIST(&retval, Z_INDIRECT_P(container), GET_OP2_ZVAL_PTR_UNDEF(BP_VAR_R), type);
