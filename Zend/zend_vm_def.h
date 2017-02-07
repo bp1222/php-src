@@ -2086,28 +2086,44 @@ ZEND_VM_HANDLER(97, ZEND_FETCH_OBJ_UNSET, VAR|UNUSED|THIS|CV, CONST|TMPVAR|CV)
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
-ZEND_VM_HANDLER(98, ZEND_FETCH_LIST, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
+ZEND_VM_HANDLER(98, ZEND_FETCH_LIST_R, CONST|TMPVAR|CV, CONST|TMPVAR|CV)
+{
+	USE_OPLINE
+	zend_free_op free_op1, free_op2;
+	zval *container, retval;
+
+	SAVE_OPLINE();
+	container = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_R);
+
+	zend_fetch_dimension_address_LIST_R(&retval, container, GET_OP2_ZVAL_PTR_UNDEF(BP_VAR_R));
+
+	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	FREE_OP2();
+	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+}
+
+ZEND_VM_HANDLER(187, ZEND_FETCH_LIST_RW, VAR|CV, CONST|TMPVAR|CV)
 {
 	USE_OPLINE
 	zend_free_op free_op1, free_op2;
 	zval *container, *retval_ptr, retval;
-	int type = opline->extended_value == ZEND_LIST_MAKE_WRITABLE ? BP_VAR_RW : BP_VAR_R;
 
 	SAVE_OPLINE();
-	container = GET_OP1_ZVAL_PTR_UNDEF(type);
+	container = GET_OP1_ZVAL_PTR_UNDEF(BP_VAR_RW);
 
-	zend_fetch_dimension_address_LIST(&retval, container, GET_OP2_ZVAL_PTR_UNDEF(BP_VAR_R), type);
+	zend_fetch_dimension_address_LIST_RW(&retval, container, GET_OP2_ZVAL_PTR_UNDEF(BP_VAR_R));
 
 	if (UNEXPECTED(Z_TYPE(retval) == IS_INDIRECT)) {
 		retval_ptr = Z_INDIRECT(retval);
 		if (EXPECTED(!Z_ISREF_P(retval_ptr))) {
 			ZVAL_MAKE_REF(retval_ptr);
 		}
-		GC_REFCOUNT(Z_REF_P(retval_ptr))++;
+		Z_ADDREF_P(retval_ptr);
 		ZVAL_REF(EX_VAR(opline->result.var), Z_REF_P(retval_ptr));
 	} else {
 		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
 	}
+
 	FREE_OP2();
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }

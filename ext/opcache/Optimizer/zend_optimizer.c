@@ -341,7 +341,8 @@ int zend_optimizer_update_op2_const(zend_op_array *op_array,
 		case ZEND_FETCH_DIM_IS:
 		case ZEND_FETCH_DIM_FUNC_ARG:
 		case ZEND_FETCH_DIM_UNSET:
-		case ZEND_FETCH_LIST:
+		case ZEND_FETCH_LIST_R:
+		case ZEND_FETCH_LIST_RW:
 			if (Z_TYPE_P(val) == IS_STRING) {
 				zend_ulong index;
 				if (ZEND_HANDLE_NUMERIC(Z_STR_P(val), index)) {

@@ -2955,7 +2955,8 @@ static void zend_update_type_info(const zend_op_array *op_array,
 		case ZEND_FETCH_DIM_W:
 		case ZEND_FETCH_DIM_UNSET:
 		case ZEND_FETCH_DIM_FUNC_ARG:
-		case ZEND_FETCH_LIST:
+		case ZEND_FETCH_LIST_R:
+		case ZEND_FETCH_LIST_RW:
 			if (ssa_ops[i].op1_def >= 0) {
 				tmp = t1 & ~(MAY_BE_RC1|MAY_BE_RCN);
 				if (opline->opcode == ZEND_FETCH_DIM_W ||
@@ -3061,9 +3062,9 @@ static void zend_update_type_info(const zend_op_array *op_array,
 			}
 			/* FETCH_LIST on a string behaves like FETCH_R on null */
 			tmp = zend_array_element_type(
-				opline->opcode != ZEND_FETCH_LIST ? t1 : ((t1 & ~MAY_BE_STRING) | MAY_BE_NULL),
+				!(opline->opcode == ZEND_FETCH_LIST_R || opline->opcode == ZEND_FETCH_LIST_RW) ? t1 : ((t1 & ~MAY_BE_STRING) | MAY_BE_NULL),
 				opline->opcode != ZEND_FETCH_DIM_R && opline->opcode != ZEND_FETCH_DIM_IS
-					&& opline->opcode != ZEND_FETCH_LIST,
+					&& !(opline->opcode == ZEND_FETCH_LIST_R || opline->opcode == ZEND_FETCH_LIST_RW),
 				opline->op2_type == IS_UNUSED);
 			if (opline->opcode == ZEND_FETCH_DIM_W ||
 			    opline->opcode == ZEND_FETCH_DIM_RW ||

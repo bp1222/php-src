@@ -1921,13 +1921,14 @@ static zend_never_inline void zend_fetch_dimension_address_read_IS(zval *result,
 	zend_fetch_dimension_address_read(result, container, dim, dim_type, BP_VAR_IS, 1, 0);
 }
 
-static zend_never_inline void zend_fetch_dimension_address_LIST(zval *result, zval *container, zval *dim, int type)
+static zend_never_inline void zend_fetch_dimension_address_LIST_R(zval *result, zval *container, zval *dim)
 {
-    if (type == BP_VAR_RW) {
-        zend_fetch_dimension_address(result, container, dim, IS_TMP_VAR, type);
-    } else {
-        zend_fetch_dimension_address_read(result, container, dim, IS_TMP_VAR, type, 0, 0);
-    }
+	zend_fetch_dimension_address_read(result, container, dim, IS_TMP_VAR, BP_VAR_R, 0, 0);
+}
+
+static zend_never_inline void zend_fetch_dimension_address_LIST_RW(zval *result, zval *container, zval *dim)
+{
+	zend_fetch_dimension_address(result, container, dim, IS_TMP_VAR, BP_VAR_RW);
 }
 
 ZEND_API void zend_fetch_dimension_by_zval(zval *result, zval *container, zval *dim)

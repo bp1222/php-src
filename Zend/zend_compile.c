@@ -784,7 +784,7 @@ void zend_do_free(znode *op1) /* {{{ */
 			}
 		} else {
 			while (opline >= CG(active_op_array)->opcodes) {
-				if (opline->opcode == ZEND_FETCH_LIST &&
+				if ((opline->opcode == ZEND_FETCH_LIST_R || opline->opcode == ZEND_FETCH_LIST_RW) &&
 				    opline->op1_type == IS_VAR &&
 				    opline->op1.var == op1->u.op.var) {
 					zend_emit_op(NULL, ZEND_FREE, op1, NULL);
@@ -2088,7 +2088,8 @@ static void zend_check_live_ranges(zend_op *opline) /* {{{ */
 			       opline->opcode == ZEND_ROPE_ADD ||
 			       opline->opcode == ZEND_ROPE_END ||
 			       opline->opcode == ZEND_END_SILENCE ||
-			       opline->opcode == ZEND_FETCH_LIST ||
+			       opline->opcode == ZEND_FETCH_LIST_R ||
+			       opline->opcode == ZEND_FETCH_LIST_RW ||
 			       opline->opcode == ZEND_VERIFY_RETURN_TYPE ||
 			       opline->opcode == ZEND_BIND_LEXICAL) {
 			/* these opcodes are handled separately */
@@ -2848,7 +2849,6 @@ static void zend_compile_list_assign(
 	zend_bool has_elems = 0;
 	zend_bool is_keyed =
 		list->children > 0 && list->child[0] != NULL && list->child[0]->child[1] != NULL;
-	zend_op *opline;
 
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *elem_ast = list->child[i];
@@ -2891,10 +2891,10 @@ static void zend_compile_list_assign(
 
 		zend_verify_list_assign_target(var_ast, old_style);
 
-		opline = zend_emit_op(&fetch_result, ZEND_FETCH_LIST, expr_node, &dim_node);
-
 		if (elem_ast->attr || (var_ast->kind == ZEND_AST_ARRAY && zend_set_list_assign_reference(var_ast))) {
-			opline->extended_value = ZEND_LIST_MAKE_WRITABLE;
+			zend_emit_op(&fetch_result, ZEND_FETCH_LIST_RW, expr_node, &dim_node);
+		} else {
+			zend_emit_op(&fetch_result, ZEND_FETCH_LIST_R, expr_node, &dim_node);
 		}
 
 		if (elem_ast->attr) {
