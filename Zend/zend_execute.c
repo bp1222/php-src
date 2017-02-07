@@ -1194,6 +1194,7 @@ static zend_never_inline ZEND_COLD void zend_wrong_string_offset(void)
 			break;
 		case ZEND_FETCH_DIM_W:
 		case ZEND_FETCH_DIM_RW:
+		case ZEND_FETCH_LIST_RW:
 		case ZEND_FETCH_DIM_FUNC_ARG:
 		case ZEND_FETCH_DIM_UNSET:
 			/* TODO: Encode the "reason" into opline->extended_value??? */
