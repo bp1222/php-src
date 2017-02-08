@@ -5280,14 +5280,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_CONST_CONST_
 {
 	USE_OPLINE
 
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, EX_CONSTANT(opline->op2));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, EX_CONSTANT(opline->op2));
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -9225,14 +9222,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_CONST_CV_HAN
 {
 	USE_OPLINE
 
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -11219,14 +11213,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_CONST_TMPVAR
 {
 	USE_OPLINE
 	zend_free_op free_op2;
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = EX_CONSTANT(opline->op1);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -18436,8 +18427,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_RW_SPEC_VAR_CONST_H
 
 	if (UNEXPECTED(IS_VAR == IS_VAR && !Z_ISREF_P(container))) {
 		zend_error(E_NOTICE, "Attempting to set reference to non refereancable value");
-		zend_fetch_dimension_address_LIST_R(&retval, container, EX_CONSTANT(opline->op2));
-		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+		zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, EX_CONSTANT(opline->op2));
 
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -22698,8 +22688,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_RW_SPEC_VAR_CV_HAND
 
 	if (UNEXPECTED(IS_VAR == IS_VAR && !Z_ISREF_P(container))) {
 		zend_error(E_NOTICE, "Attempting to set reference to non refereancable value");
-		zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
-		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+		zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
 
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -25260,8 +25249,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_RW_SPEC_VAR_TMPVAR_
 
 	if (UNEXPECTED(IS_VAR == IS_VAR && !Z_ISREF_P(container))) {
 		zend_error(E_NOTICE, "Attempting to set reference to non refereancable value");
-		zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
-		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+		zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
 		zval_ptr_dtor_nogc(free_op2);
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -36482,14 +36470,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_CV_CONST_HAN
 {
 	USE_OPLINE
 
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, EX_CONSTANT(opline->op2));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, EX_CONSTANT(opline->op2));
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -36505,8 +36490,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_RW_SPEC_CV_CONST_HA
 
 	if (UNEXPECTED(IS_CV == IS_VAR && !Z_ISREF_P(container))) {
 		zend_error(E_NOTICE, "Attempting to set reference to non refereancable value");
-		zend_fetch_dimension_address_LIST_R(&retval, container, EX_CONSTANT(opline->op2));
-		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+		zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, EX_CONSTANT(opline->op2));
 
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -42900,14 +42884,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_CV_CV_HANDLE
 {
 	USE_OPLINE
 
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -42923,8 +42904,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_RW_SPEC_CV_CV_HANDL
 
 	if (UNEXPECTED(IS_CV == IS_VAR && !Z_ISREF_P(container))) {
 		zend_error(E_NOTICE, "Attempting to set reference to non refereancable value");
-		zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
-		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+		zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
 
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -46599,14 +46579,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_CV_TMPVAR_HA
 {
 	USE_OPLINE
 	zend_free_op free_op2;
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_cv_undef(execute_data, opline->op1.var);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -46622,8 +46599,7 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_RW_SPEC_CV_TMPVAR_H
 
 	if (UNEXPECTED(IS_CV == IS_VAR && !Z_ISREF_P(container))) {
 		zend_error(E_NOTICE, "Attempting to set reference to non refereancable value");
-		zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
-		ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+		zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
 		zval_ptr_dtor_nogc(free_op2);
 		ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 	}
@@ -49864,14 +49840,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_TMPVAR_CONST
 {
 	USE_OPLINE
 	zend_free_op free_op1;
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, EX_CONSTANT(opline->op2));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, EX_CONSTANT(opline->op2));
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -52291,14 +52264,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_TMPVAR_CV_HA
 {
 	USE_OPLINE
 	zend_free_op free_op1;
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_cv_undef(execute_data, opline->op2.var));
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
@@ -53586,14 +53556,11 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_FETCH_LIST_R_SPEC_TMPVAR_TMPVA
 {
 	USE_OPLINE
 	zend_free_op free_op1, free_op2;
-	zval *container, retval;
+	zval *container;
 
 	SAVE_OPLINE();
 	container = _get_zval_ptr_var(opline->op1.var, execute_data, &free_op1);
-
-	zend_fetch_dimension_address_LIST_R(&retval, container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
-
-	ZVAL_COPY_VALUE(EX_VAR(opline->result.var), &retval);
+	zend_fetch_dimension_address_LIST_R(EX_VAR(opline->result.var), container, _get_zval_ptr_var(opline->op2.var, execute_data, &free_op2));
 	zval_ptr_dtor_nogc(free_op2);
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
