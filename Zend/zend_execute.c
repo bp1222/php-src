@@ -1623,7 +1623,7 @@ str_index:
 		switch (Z_TYPE_P(dim)) {
 			case IS_UNDEF:
 				zval_undefined_cv(EG(current_execute_data)->opline->op2.var, EG(current_execute_data));
-				/* break missing intentionally */
+				/* break missing intentionally */				
 			case IS_NULL:
 				offset_key = ZSTR_EMPTY_ALLOC();
 				goto str_index;
@@ -1729,7 +1729,7 @@ fetch_from_array:
 			} else if (EXPECTED(retval && Z_TYPE_P(retval) != IS_UNDEF)) {
 				if (!Z_ISREF_P(retval)) {
 					if (Z_REFCOUNTED_P(retval) &&
-						Z_REFCOUNT_P(retval) > 1) {
+					    Z_REFCOUNT_P(retval) > 1) {
 						if (Z_TYPE_P(retval) != IS_OBJECT) {
 							Z_DELREF_P(retval);
 							ZVAL_DUP(result, retval);
@@ -1882,7 +1882,7 @@ try_string_offset:
 			dim = &EG(uninitialized_zval);
 		}
 		if (!Z_OBJ_HT_P(container)->read_dimension) {
-			zend_throw_error(NULL, "Cannot use object of type %s as array", ZSTR_VAL(Z_OBJCE_P(container)->name));
+			zend_throw_error(NULL, "Cannot use object as array");
 			ZVAL_NULL(result);
 		} else {
 			retval = Z_OBJ_HT_P(container)->read_dimension(container, dim, type, result);
@@ -1941,6 +1941,7 @@ ZEND_API void zend_fetch_dimension_by_zval_is(zval *result, zval *container, zva
 {
 	zend_fetch_dimension_address_read(result, container, dim, dim_type, BP_VAR_IS, 1, 0);
 }
+
 
 static zend_always_inline void zend_fetch_property_address(zval *result, zval *container, uint32_t container_op_type, zval *prop_ptr, uint32_t prop_op_type, void **cache_slot, int type)
 {
