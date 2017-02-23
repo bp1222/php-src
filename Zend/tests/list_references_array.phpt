@@ -15,7 +15,7 @@ var_dump($a);
 unset($one, $two, $three);
 
 $a = ['two' => 2, 'one' => 1];
-list('one' => &$one, 'two' => $two) = $a;
+['one' => &$one, 'two' => $two] = $a;
 $one++;
 var_dump($a);
 unset($one, $two);
