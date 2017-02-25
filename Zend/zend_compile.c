@@ -4528,6 +4528,7 @@ void zend_compile_foreach(zend_ast *ast) /* {{{ */
 	zend_ast *key_ast = ast->child[2];
 	zend_ast *stmt_ast = ast->child[3];
 	zend_bool by_ref = value_ast->kind == ZEND_AST_REF;
+	zend_bool list_ref = 0;
 	zend_bool is_variable = zend_is_variable(expr_ast) && !zend_is_call(expr_ast)
 		&& zend_can_write_to_variable(expr_ast);
 
@@ -4544,27 +4545,31 @@ void zend_compile_foreach(zend_ast *ast) /* {{{ */
 		}
 	}
 
+	if (value_ast->kind == ZEND_AST_ARRAY && zend_set_list_assign_reference(value_ast)) {
+		list_ref = 1;
+	}
+
 	if (by_ref) {
 		value_ast = value_ast->child[0];
 	}
 
-	if (by_ref && is_variable) {
+	if ((by_ref || list_ref) && is_variable) {
 		zend_compile_var(&expr_node, expr_ast, BP_VAR_W);
 	} else {
 		zend_compile_expr(&expr_node, expr_ast);
 	}
 
-	if (by_ref) {
+	if (by_ref || list_ref) {
 		zend_separate_if_call_and_write(&expr_node, expr_ast, BP_VAR_W);
 	}
 
 	opnum_reset = get_next_op_number(CG(active_op_array));
-	opline = zend_emit_op(&reset_node, by_ref ? ZEND_FE_RESET_RW : ZEND_FE_RESET_R, &expr_node, NULL);
+	opline = zend_emit_op(&reset_node, (by_ref || list_ref) ? ZEND_FE_RESET_RW : ZEND_FE_RESET_R, &expr_node, NULL);
 
 	zend_begin_loop(ZEND_FE_FREE, &reset_node);
 
 	opnum_fetch = get_next_op_number(CG(active_op_array));
-	opline = zend_emit_op(NULL, by_ref ? ZEND_FE_FETCH_RW : ZEND_FE_FETCH_R, &reset_node, NULL);
+	opline = zend_emit_op(NULL, (by_ref || list_ref) ? ZEND_FE_FETCH_RW : ZEND_FE_FETCH_R, &reset_node, NULL);
 
 	if (is_this_fetch(value_ast)) {
 		zend_error_noreturn(E_COMPILE_ERROR, "Cannot re-assign $this");
