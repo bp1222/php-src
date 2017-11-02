@@ -452,8 +452,11 @@ ZEND_API int zend_ast_evaluate(zval *result, zend_ast *ast, zend_class_entry *sc
 				zval_dtor(&op1);
 				ret = FAILURE;
 			} else {
-				zend_fetch_dimension_const(result, &op1, &op2, (ast->attr == ZEND_DIM_IS) ? BP_VAR_IS : BP_VAR_R);
-
+				if (!Z_ISERROR(op1)) {
+					zend_fetch_dimension_const(result, &op1, &op2, (ast->attr == ZEND_DIM_IS) ? BP_VAR_IS : BP_VAR_R);
+				} else {
+					ZVAL_COPY_OR_DUP(result, &op1);
+				}
 				zval_dtor(&op1);
 				zval_dtor(&op2);
 			}

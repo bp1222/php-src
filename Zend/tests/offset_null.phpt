@@ -25,13 +25,30 @@ var_dump($null[$arr]);
 echo "Done\n";
 ?>
 --EXPECTF--	
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
+
+Warning: Variable of type null does not accept array offsets in %s on line %d
 NULL
 Done

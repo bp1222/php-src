@@ -1717,7 +1717,7 @@ static zend_never_inline void zend_fetch_dimension_address_UNSET(zval *result, z
 	zend_fetch_dimension_address(result, container_ptr, dim, dim_type, BP_VAR_UNSET EXECUTE_DATA_CC);
 }
 
-static zend_always_inline void zend_fetch_dimension_address_read(zval *result, zval *container, zval *dim, int dim_type, int type, int support_strings, int slow EXECUTE_DATA_DC)
+static zend_always_inline void zend_fetch_dimension_address_read(zval *result, zval *container, zval *dim, int dim_type, int type, int support_strings, int slow, int is_ast EXECUTE_DATA_DC)
 {
 	zval *retval;
 
@@ -1812,42 +1812,52 @@ try_string_offset:
 			}
 		}
 	} else {
-		if (type != BP_VAR_IS && UNEXPECTED(Z_TYPE_P(container) == IS_UNDEF)) {
-			zval_undefined_cv(EX(opline)->op1.var EXECUTE_DATA_CC);
+		if (type != BP_VAR_IS) {
+			if (UNEXPECTED(Z_TYPE_P(container) == IS_UNDEF)) {
+				zval_undefined_cv(EX(opline)->op1.var EXECUTE_DATA_CC);
+			} else if (!Z_ISERROR_P(container)) {
+				zend_error(E_WARNING, "Variable of type %s does not accept array offsets", zend_get_type_by_const(Z_TYPE_P(container)));
+			}
 		}
+
 		if (/*dim_type == IS_CV &&*/ UNEXPECTED(Z_TYPE_P(dim) == IS_UNDEF)) {
 			zval_undefined_cv(EX(opline)->op2.var EXECUTE_DATA_CC);
 		}
-		ZVAL_NULL(result);
+
+		if (type != BP_VAR_IS && (is_ast || ((EX(opline)+1)->op1_type == IS_VAR && EX(opline)->opcode == (EX(opline)+1)->opcode))) {
+			ZVAL_ERROR(result);
+		} else {
+			ZVAL_NULL(result);
+		}
 	}
 }
 
 static zend_never_inline void zend_fetch_dimension_address_read_R(zval *result, zval *container, zval *dim, int dim_type EXECUTE_DATA_DC)
 {
-	zend_fetch_dimension_address_read(result, container, dim, dim_type, BP_VAR_R, 1, 0 EXECUTE_DATA_CC);
+	zend_fetch_dimension_address_read(result, container, dim, dim_type, BP_VAR_R, 1, 0, 0 EXECUTE_DATA_CC);
 }
 
 static zend_never_inline void zend_fetch_dimension_address_read_R_slow(zval *result, zval *container, zval *dim EXECUTE_DATA_DC)
 {
-	zend_fetch_dimension_address_read(result, container, dim, IS_CV, BP_VAR_R, 1, 1 EXECUTE_DATA_CC);
+	zend_fetch_dimension_address_read(result, container, dim, IS_CV, BP_VAR_R, 1, 1, 0 EXECUTE_DATA_CC);
 }
 
 static zend_never_inline void zend_fetch_dimension_address_read_IS(zval *result, zval *container, zval *dim, int dim_type EXECUTE_DATA_DC)
 {
-	zend_fetch_dimension_address_read(result, container, dim, dim_type, BP_VAR_IS, 1, 0 EXECUTE_DATA_CC);
+	zend_fetch_dimension_address_read(result, container, dim, dim_type, BP_VAR_IS, 1, 0, 0 EXECUTE_DATA_CC);
 }
 
 static zend_never_inline void zend_fetch_dimension_address_read_LIST(zval *result, zval *container, zval *dim EXECUTE_DATA_DC)
 {
-	zend_fetch_dimension_address_read(result, container, dim, IS_TMP_VAR, BP_VAR_R, 0, 0 EXECUTE_DATA_CC);
+	zend_fetch_dimension_address_read(result, container, dim, IS_TMP_VAR, BP_VAR_R, 0, 0, 0 EXECUTE_DATA_CC);
 }
 
 ZEND_API void zend_fetch_dimension_const(zval *result, zval *container, zval *dim, int type)
 {
 	if (type == BP_VAR_IS) {
-		zend_fetch_dimension_address_read_IS(result, container, dim, IS_CONST NO_EXECUTE_DATA_CC);
+		zend_fetch_dimension_address_read(result, container, dim, IS_CONST, BP_VAR_IS, 1, 0, 1 NO_EXECUTE_DATA_CC);
 	} else {
-		zend_fetch_dimension_address_read_R(result, container, dim, IS_CONST NO_EXECUTE_DATA_CC);
+		zend_fetch_dimension_address_read(result, container, dim, IS_CONST, BP_VAR_R, 1, 0, 1 NO_EXECUTE_DATA_CC);
 	}
 }
 
